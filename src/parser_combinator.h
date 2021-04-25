@@ -259,9 +259,11 @@ Parser<char, X> string_match(std::string str) {
 }
 
 template <typename X>
-const Parser<std::string, X> ident = lower<X>.seq("ident", alphanum<X>.many()).map([](Both<char,std::vector<char>> res) {
-  res.rx.insert(res.rx.begin(), res.lx);
-  return std::string(res.rx.begin(), res.rx.end());
+const Parser<std::string, X> ident = Parser<std::string, X>("ident", [](State<X> &s) {
+  char x = lower<X>.parse(s);
+  std::vector<char> xs = alphanum<X>.many().parse(s);
+  xs.insert(xs.begin(), x);
+  return std::string(xs.begin(), xs.end());
 });
 
 template <typename X>
@@ -275,7 +277,12 @@ const Parser<std::vector<char>, X> spaces = space<X>.many();
 
 template <typename X, typename T>
 Parser<T, X> token(Parser<T, X> p, std::string label = "") {
-  return spaces<X>.seq(p).seq("token('" + label + "')", spaces<X>).map([](Both<Both<std::vector<char>, T>,std::vector<char>> res) { return res.lx.rx; });
+  return Parser<T, X>("token('" + label + "')", [p](State<X> &s) {
+    spaces<X>.parse(s);
+    T res = p.parse(s);
+    spaces<X>.parse(s);
+    return res;
+  });
 }
 
 template <typename X>
