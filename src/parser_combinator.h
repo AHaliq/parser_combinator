@@ -212,6 +212,7 @@ public:
 template <typename X>
 Parser<char, X> sat(std::function<bool (char)> pred, std::string label = "") {
   return Parser<char, X>(label, [=](State<X> &s) {
+    if((*s.source).size() == s.i) throw std::vector<State<X>>();
     char c = (*s.source).at(s.i);
     if (pred(c)) {
       s.i++;
@@ -248,6 +249,7 @@ template <typename X>
 Parser<char, X> string_match(std::string str) {
   return Parser<char, X>("string_match('" + str + "')", [str](State<X> &s) {
     for(char _c : str) {
+      if((*s.source).size() == s.i) throw std::vector<State<X>>();
       char c = (*s.source).at(s.i);
       if (c == _c) {
         s.i++;
