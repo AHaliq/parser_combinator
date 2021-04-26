@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <string>
 #include <functional>
@@ -5,7 +6,6 @@
 #include <cctype>
 
 // GENERIC DATA STRUCTURES ====================================================
-
 template <typename T, typename U>
 class Both
 {
@@ -23,37 +23,50 @@ template <typename T, typename U>
 class Either
 {
 public:
+  bool left;
   T lx;
   U rx;
-  bool left;
-  Either(T x)
-  {
-    lx = x;
-    left = true;
-  }
-  Either(U x)
-  {
-    rx = x;
-    left = false;
-  }
+  template <class T_, class U_>
+  friend Either<T_, U_> Left(T_ x);
+  template <class T_, class U_>
+  friend Either<T_, U_> Right(U_ x);
 };
+
+template <class T1, class T2>
+Either<T1, T2> Left(T1 x)
+{
+  Either<T1, T2> e;
+  e.left = true;
+  e.lx = x;
+  return e;
+}
+template <class T1, class T2>
+Either<T1, T2> Right(T2 x)
+{
+  Either<T1, T2> e;
+  e.left = false;
+  e.rx = x;
+  return e;
+}
 
 // PARSER DATA STRUCTURES =====================================================
 
-template <typename X>
 class State
 {
 public:
-  X data;
   int i;
   std::string *source;
-  State(std::string *s) { source = s; }
+  State(std::string *s)
+  {
+    i = 0;
+    source = s;
+  }
 };
 
 class RenderItem
 {
 public:
-  virtual std::string to_sexp(int sep = 0);/*
+  virtual std::string to_sexp(int sep = 0); /*
   virtual std::string to_stub(int sep = 0);
   virtual std::string to_latex(int sep = 0);*/
 };
@@ -66,22 +79,25 @@ public:
   Node(RenderItem val) { data = val; }
   Node() {}
 
-  Node& add_child(Node &c) {
+  Node &add_child(Node &c)
+  {
     children.push_back(c);
     return *this;
   }
 
-  std::string to_sexp(int sep = 0) {
+  std::string to_sexp(int sep = 0)
+  {
     std::string str = "( ";
     std::string sepstr(sep + 2, ' ');
     str += data.to_sexp(sep + 2);
-    for(Node &c : children) {
+    for (Node &c : children)
+    {
       str += "\n" + sepstr;
       str += c.to_sexp(sep + 2);
     }
     str += " )";
     return str;
-  }/*
+  } /*
   std::string to_stub(int sep = 0) {
 
   }
@@ -92,213 +108,227 @@ public:
 
 // PARSER CLASS ===============================================================
 
-template <typename T, typename X = void>
+template <typename T>
 class Parser
 {
 public:
-  std::function<T &(State<X> &)> f;
+  std::function<T(State &)> f;
   std::string label;
-  Parser(std::string l, std::function<T &(State<X> &)> _f)
+  Parser(std::string l, std::function<T(State &)> _f)
   {
     f = _f;
     label = l;
   }
-  Parser(std::function<T &(State<X> &)> _f)
+  Parser(std::function<T(State &)> _f)
   {
     f = _f;
     label = "";
   }
 
-  T &parse(State<X> &s)
+  T parse(State &s) const
   {
-    State<X> _s = s;
+    State _s = s;
     try
     {
       return f(s);
     }
-    catch (std::vector<State<X> > &e)
+    catch (std::vector<State> &e)
     {
       e.push_back(_s);
       throw e;
     }
   }
 
-  template <typename V, typename U>
-  Parser<V, X> seq(std::string l, Parser<U, X> b, std::function<V &(T &, U &)> g)
+  T parse(std::string str) const
   {
-    return Parser<V, X>(l, [g, b, this](State<X> &s) {
+    State s(&str);
+    return parse(s);
+  }
+
+  template <typename V, typename U>
+  Parser<V> seq(std::string l, Parser<U> b, std::function<V(T &, U &)> g) const
+  {
+    return Parser<V>(l, [&, g, b](State &s) {
       return g(parse(s), b.parse(s));
     });
   }
 
   template <typename V, typename U>
-  Parser<V, X> seq(Parser<U, X> b, std::function<V &(T &, U &)> g)
+  Parser<V> seq(Parser<U> b, std::function<V(T &, U &)> g) const
   {
     return seq("", b, g);
   }
 
   template <typename U>
-  Parser<Both<T, U>, X> seq(std::string l, Parser<U, X> b)
+  Parser<Both<T, U> > seq(std::string l, Parser<U> b) const
   {
-    return seq(l, b, [=](T &x, U &y) {
+    return seq(l, b, [](T &x, U &y) {
       return Both<T, U>(x, y);
     });
   }
 
   template <typename U>
-  Parser<Both<T, U>, X> seq(Parser<U, X> b)
+  Parser<Both<T, U> > seq(Parser<U> b) const
   {
     return seq("", b);
   }
 
   template <typename U>
-  Parser<Either<T, U>, X> alt(std::string l, Parser<U, X> b)
+  Parser<Either<T, U> > alt(std::string l, Parser<U> b) const
   {
-    return Parser<Either<T, U>, X>(l, [b, this](State<X> &s) {
-      State<X> _s = s;
+    return Parser<Either<T, U> >(l, [&, b](State &s) mutable {
+      State _s = s;
       try
       {
-        return Either<T, U>(parse(s));
+        return Left<T, U>(parse(s));
       }
-      catch (std::vector<State<X> > e)
+      catch (std::vector<State> e)
       {
-        return Either<T, U>(b.parse(_s));
+        return Right<T, U>(b.parse(_s));
       }
     });
   }
 
   template <typename U>
-  Parser<Either<T, U>, X> alt(Parser<U, X> b)
+  Parser<Either<T, U> > alt(Parser<U> b) const
   {
     return alt("", b);
   }
 
   template <typename U>
-  Parser<U, X> map(std::function<U &(T &)> g)
+  Parser<U> map(std::function<U(T)> g) const
   {
-    return Parser<U, X>([g, this](State<X> &s) {
+    return Parser<U>([&, g](State &s) mutable {
       return g(parse(s));
     });
   }
 
-  Parser<std::vector<T>, X> many(bool at_least_one = false)
+  Parser<std::vector<T> > many(bool at_least_one = false) const
   {
-    return Parser<std::vector<T>, X>([this, at_least_one](State<X> &s) {
+    return Parser<std::vector<T> >([&, at_least_one](State &s) -> std::vector<T> {
       bool once = false;
-      State<X> _s = s;
+      State _s = s;
       std::vector<T> res;
-      try {
-        while(true) {
+      try
+      {
+        while (true)
+        {
           res.push_back(parse(s));
           _s = s;
           once = true;
         }
-      } catch (std::vector<State<X> > e) {
-        if(at_least_one && !once) {
-          throw std::vector<State<X> >();
+      }
+      catch (std::vector<State> e)
+      {
+        if (at_least_one && !once)
+        {
+          throw std::vector<State>();
         }
         s = _s;
       }
+      return res;
     });
   }
 
-  Parser<std::vector<T>, X> some() {
+  Parser<std::vector<T> > some() const
+  {
     return many(true);
   }
 };
 
+// PRIMITIVE PARSER AUXILLIARY FUNCTIONS ======================================
+
+static const bool digit_pred(char c) { return std::isdigit(c); }
+static const bool lower_pred(char c) { return std::islower(c); }
+static const bool upper_pred(char c) { return std::isupper(c); }
+static const bool letter_pred(char c) { return std::isalpha(c); }
+static const bool alphanum_pred(char c) { return std::isalnum(c); }
+static const bool space_pred(char c) { return std::isspace(c); }
+
+static const int int_of_charvec(std::vector<char> res) { return std::stoi(std::string(res.begin(), res.end())); }
+static const int int_of_either_ints(Either<int, int> res) { return res.left ? res.lx : res.rx; }
+
 // PRIMITIVE PARSERS ==========================================================
 
-template <typename X>
-Parser<char, X> sat(std::function<bool (char)> pred, std::string label = "") {
-  return Parser<char, X>(label, [=](State<X> &s) {
-    if((*s.source).size() == s.i) throw std::vector<State<X>>();
+static const Parser<char> sat(std::function<bool(char)> pred, std::string label = "")
+{
+  return Parser<char>(label, [pred](State &s) -> char {
+    if ((*s.source).size() == s.i)
+      throw std::vector<State>();
     char c = (*s.source).at(s.i);
-    if (pred(c)) {
+    if (pred(c))
       s.i++;
-    } else {
-      throw std::vector<State<X> >();
-    }
+    else
+      throw std::vector<State>();
+    return c;
   });
 }
 
-template <typename X>
-const Parser<char, X> digit = sat<X>(std::isdigit, "digit");
+static const Parser<char> digit = sat(digit_pred, "digit");
+static const Parser<char> lower = sat(lower_pred, "lower");
+static const Parser<char> upper = sat(upper_pred, "upper");
+static const Parser<char> letter = sat(letter_pred, "letter");
+static const Parser<char> alphanum = sat(alphanum_pred, "alphanum");
+static const Parser<char> space = sat(space_pred, "space");
 
-template <typename X>
-const Parser<char, X> lower = sat<X>(std::islower, "lower");
-
-template <typename X>
-const Parser<char, X> upper = sat<X>(std::isupper, "upper");
-
-template <typename X>
-const Parser<char, X> letter = sat<X>(std::isalpha, "letter");
-
-template <typename X>
-const Parser<char, X> alphanum = sat<X>(std::isalnum, "alphanum");
-
-template <typename X>
-const Parser<char, X> space = sat<X>(std::isspace, "space");
-
-template <typename X>
-Parser<char, X> char_match(char c) {
-  return sat<X>([c](char _c) { return _c == c; }, "char_match('" + std::string(1,c) + "')");
+static Parser<char> char_match(char c)
+{
+  return sat([c](char _c) -> bool { return _c == c; }, "char_match('" + std::string(1, c) + "')");
 }
-
-template <typename X>
-Parser<char, X> string_match(std::string str) {
-  return Parser<char, X>("string_match('" + str + "')", [str](State<X> &s) {
-    for(char _c : str) {
-      if((*s.source).size() == s.i) throw std::vector<State<X>>();
+static Parser<std::string> string_match(std::string str)
+{
+  return Parser<std::string>("string_match('" + str + "')", [str](State &s) -> std::string {
+    for (char _c : str)
+    {
+      if ((*s.source).size() == s.i)
+        throw std::vector<State>();
       char c = (*s.source).at(s.i);
-      if (c == _c) {
+      if (c == _c)
         s.i++;
-      } else {
-        throw std::vector<State<X> >();
-      }
+      else
+        throw std::vector<State>();
     }
+    return str;
   });
 }
 
-template <typename X>
-const Parser<std::string, X> ident = Parser<std::string, X>("ident", [](State<X> &s) {
-  char x = lower<X>.parse(s);
-  std::vector<char> xs = alphanum<X>.many().parse(s);
+static const Parser<std::string> ident = Parser<std::string>("ident", [](State &s) {
+  char x = lower.parse(s);
+  std::vector<char> xs = alphanum.many().parse(s);
   xs.insert(xs.begin(), x);
   return std::string(xs.begin(), xs.end());
 });
 
-template <typename X>
-const Parser<int, X> nat = digit<X>.some().map(std::stoi);
+static const Parser<std::vector<char>> digit_some = digit.some();
+static const Parser<int> nat = digit_some.map<int>(int_of_charvec);
 
-template <typename X>
-const Parser<int, X> intg = char_match<X>('-').seq("intg", nat<X>).map([](int x) { return -x; }).alt(nat<X>);
+static const Parser<int> intg_neg =
+    Parser<int>([](State &s) {
+      char_match('-').parse(s);
+      int res = nat.parse(s);
+      return -res;
+    });
+static const Parser<Either<int,int>> intg_either = intg_neg.alt("intg", nat);
+static const Parser<int> intg = intg_either.map<int>(int_of_either_ints);
 
-template <typename X>
-const Parser<std::vector<char>, X> spaces = space<X>.many();
+static const Parser<std::vector<char> > spaces = space.many();
 
-template <typename X, typename T>
-Parser<T, X> token(Parser<T, X> p, std::string label = "") {
-  return Parser<T, X>("token('" + label + "')", [p](State<X> &s) {
-    spaces<X>.parse(s);
+template <typename T>
+static Parser<T> token(Parser<T> p, std::string label = "")
+{
+  return Parser<T>("token('" + label + "')", [p](State &s) {
+    spaces.parse(s);
     T res = p.parse(s);
-    spaces<X>.parse(s);
+    spaces.parse(s);
     return res;
   });
 }
-
-template <typename X>
-const Parser<std::string, X> identifier = token<std::string, X>(ident<X>, "identifier");
-
-template <typename X>
-const Parser<int, X> natural = token<int, X>(nat<X>, "natural");
-
-template <typename X>
-const Parser<int, X> integer = token<int, X>(intg<X>, "integer");
-
-template <typename X>
-Parser<std::string, X> symbol(std::string str) {
-  return token<std::string, X>(string_match<X>(str), "symbol");
+static const Parser<std::string> identifier = token<std::string>(ident, "identifier");
+static const Parser<int> natural = token<int>(nat, "natural");
+static const Parser<int> integer = token<int>(intg, "integer");
+static Parser<std::string> symbol(std::string str)
+{
+  return token<std::string>(string_match(str), "symbol");
 }
 
 //TODO example calculator parser
@@ -306,4 +336,4 @@ Parser<std::string, X> symbol(std::string str) {
 //TODO implement to_stub
 //TODO implement to_latex
 //TODO consider generalized state, adv() and clone()
-  // concrete as string pointer state, string stream state
+// concrete as string pointer state, string stream state
