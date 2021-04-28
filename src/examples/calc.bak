@@ -1,0 +1,97 @@
+#pragma once
+#include "../parser_combinator.h"
+#include <functional>
+#include <vector>
+#include <string>
+#include <stack>
+
+class CalcState : public State {
+public:
+  std::stack<int> cumulative;
+  CalcState (std::string *source) : State(source) {};
+};
+
+namespace calc_util {
+  static const std::function<int (int, int)> add = [](int x, int y) -> int { return x + y; };
+  static const std::function<int (int, int)> sub = [](int x, int y) -> int { return x - y; };
+  static const std::function<int (int, int)> mul = [](int x, int y) -> int { return x * y; };
+  static const std::function<int (int, int)> div = [](int x, int y) -> int { return x / y; };
+  static const std::function<int (int, State&)> push = [](int x, State &s) -> int {
+    CalcState _s = *dynamic_cast<CalcState*>(&s);
+    _s.cumulative.push(x);
+    return x;
+  };
+  static const std::function<int (int, State&)> pop = [](int x, State &s) -> int {
+    CalcState _s = *dynamic_cast<CalcState*>(&s);
+    int res = _s.cumulative.top();
+    _s.cumulative.pop();
+    return res;
+  };
+  static std::function<int (int, State&)> combine(std::function<int (int, int)> op) {
+    return [op](int x, State &s) -> int {
+      CalcState _s = *dynamic_cast<CalcState*>(&s);
+      int _x = op(_s.cumulative.top(), x);
+      _s.cumulative.pop();
+      _s.cumulative.push(_x);
+      return _x;
+    };
+  }
+  static const Parser<int>* op_p1_p2(std::string label, std::string op_l, std::function<int (int,int)> op, const Parser<int> *p1, const Parser<int> *p2) {
+    return 
+      parsers::symbol(op_l)
+      ->seq(p1)
+      ->map<int>(parser_util::snd<std::string,int>)
+      ->map<int>(calc_util::combine(calc_util::add))
+      ->seq<int>(p2)
+      ->map<int>(parser_util::snd<int,int>);
+  }
+};
+
+/*
+expr:           factor expr_tail
+expr_tail:      "+" factor expr_tail | "-" factor expr_tail |
+factor:         term factor_tail
+factor_tail:    "*" term factor_tail | "/" term factor_tail |
+term:           NUM | "(" expr ")"
+*/
+class calc {
+  public:
+  Parser<int> *term, *factor_tail, *factor, *expr_tail, *expr;
+  calc() {
+  term =
+    parsers::integer
+    ->map<int>(calc_util::push)
+    ->alt((
+        parsers::symbol("(")
+        ->seq<int>(expr)
+        ->seq<std::string>(parsers::symbol(")")))
+      ->map<int>(parser_util::mid_of_three<std::string,int,std::string>))
+    ->map<int>(parser_util::t_of_either_ts<int>);
+  
+  factor_tail =
+    calc_util::op_p1_p2("mul", "*", calc_util::mul, term, factor_tail)
+    ->alt<int>(calc_util::op_p1_p2("div", "/", calc_util::div, term, factor_tail))
+    ->map<int>(parser_util::t_of_either_ts<int>)
+    ->alt<int>(parsers::empty)
+    ->map<int>(parser_util::t_of_either_ts<int>);
+
+  factor =
+    term
+    ->seq<int>(factor_tail)
+    ->map<int>(parser_util::snd<int, int>)
+    ->map<int>(calc_util::pop);
+  
+  expr_tail =
+    calc_util::op_p1_p2("add", "+", calc_util::add, term, expr_tail)
+    ->alt<int>(calc_util::op_p1_p2("sub", "-", calc_util::sub, term, expr_tail))
+    ->map<int>(parser_util::t_of_either_ts<int>)
+    ->alt<int>(parsers::empty)
+    ->map<int>(parser_util::t_of_either_ts<int>);
+
+  expr =
+    factor
+    ->seq<int>(expr_tail)
+    ->map<int>(parser_util::snd<int, int>)
+    ->map<int>(calc_util::pop);
+  }
+};

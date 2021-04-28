@@ -1,0 +1,375 @@
+#pragma once
+#include <iostream>
+#include <string>
+#include <functional>
+#include <vector>
+#include <cctype>
+
+// GENERIC DATA STRUCTURES ====================================================
+template <typename T, typename U>
+class Both
+{
+public:
+  T lx;
+  U rx;
+  Both(T x, U y) :lx(x), rx(y) {};
+};
+
+template <typename T, typename U>
+class Either
+{
+public:
+  bool left;
+  T lx;
+  U rx;
+  template <class T_, class U_>
+  friend Either<T_, U_> Left(T_ x);
+  template <class T_, class U_>
+  friend Either<T_, U_> Right(U_ x);
+};
+
+template <class T1, class T2>
+Either<T1, T2> Left(T1 x)
+{
+  Either<T1, T2> e;
+  e.left = true;
+  e.lx = x;
+  return e;
+}
+template <class T1, class T2>
+Either<T1, T2> Right(T2 x)
+{
+  Either<T1, T2> e;
+  e.left = false;
+  e.rx = x;
+  return e;
+}
+
+// PARSER DATA STRUCTURES =====================================================
+
+class State
+{
+public:
+  int i;
+  std::string *source;
+  std::string label;
+  State(std::string *s)
+  {
+    i = 0;
+    source = s;
+  }
+  virtual ~State() {};
+};
+
+class RenderItem
+{
+public:
+  virtual std::string to_sexp(int sep = 0); /*
+  virtual std::string to_stub(int sep = 0);
+  virtual std::string to_latex(int sep = 0);*/
+};
+
+class Node
+{
+public:
+  RenderItem data;
+  std::vector<Node> children;
+  Node(RenderItem val) { data = val; }
+  Node() {}
+
+  Node &add_child(Node &c)
+  {
+    children.push_back(c);
+    return *this;
+  }
+
+  std::string to_sexp(int sep = 0)
+  {
+    std::string str = "( ";
+    std::string sepstr(sep + 2, ' ');
+    str += data.to_sexp(sep + 2);
+    for (Node &c : children)
+    {
+      str += "\n" + sepstr;
+      str += c.to_sexp(sep + 2);
+    }
+    str += " )";
+    return str;
+  } /*
+  std::string to_stub(int sep = 0) {
+
+  }
+  std::string to_latex(int sep = 0) {
+
+  }*/
+};
+
+// PARSER CLASS ===============================================================
+
+template <typename T>
+class Parser
+{
+public:
+  std::function<T(State &)> f;
+  std::string label;
+  Parser(std::string l, std::function<T(State &)> _f)
+  {
+    f = _f;
+    label = l;
+  }
+  Parser(std::function<T(State &)> _f)
+  {
+    f = _f;
+    label = "";
+  }
+
+  T parse(State &s) const
+  {
+    State _s = s;
+    try
+    {
+      return f(s);
+    }
+    catch (std::vector<State> &e)
+    {
+      _s.label = label;
+      e.push_back(_s);
+      throw e;
+    }
+  }
+  template <class S = State>
+  T parse(std::string str) const
+  {
+    S s(&str);
+    return parse(s);
+  }
+
+  template <typename V, typename U>
+  Parser<V> *seq(std::string l, const Parser<U> *b, std::function<V(T, U)> g) const
+  {
+    return new Parser<V>(l, [&, b, g](State &s) {
+      return g(parse(s), b->parse(s));
+    });
+  }
+
+  template <typename V, typename U>
+  Parser<V> *seq(const Parser<U> *b, std::function<V(T, U)> g) const
+  {
+    return seq<V, U>("", b, g);
+  }
+
+  template <typename U>
+  Parser<Both<T, U> > *seq(std::string l, const Parser<U> *b) const
+  {
+    return seq<Both<T, U>, U>(l, b, [](T x, U y) -> Both<T, U> {
+      return Both<T, U>(x, y);
+    });
+  }
+
+  template <typename U>
+  Parser<Both<T, U> > *seq(const Parser<U> *b) const
+  {
+    return seq<U>("", b);
+  }
+
+  template <typename U>
+  Parser<Either<T, U> > *alt(std::string l, const Parser<U> *b) const
+  {
+    return new Parser<Either<T, U> >(l, [&, b](State &s) {
+      State _s = s;
+      try
+      {
+        return Left<T, U>(parse(s));
+      }
+      catch (std::vector<State> e)
+      {
+        return Right<T, U>(b->parse(_s));
+      }
+    });
+  }
+
+  template <typename U>
+  Parser<Either<T, U> > *alt(const Parser<U> *b) const
+  {
+    return alt<U>("", b);
+  }
+
+  template <typename U>
+  Parser<U> *map(std::string l, std::function<U(T)> g) const
+  {
+    return new Parser<U>(l, [&, g](State &s) {
+      return g(parse(s));
+    });
+  }
+
+  template <typename U>
+  Parser<U> *map(std::function<U(T)> g) const
+  {
+    return map<U>("", g);
+  }
+
+  template <typename U>
+  Parser<U> *map(std::string l, std::function<U(T, State &)> g) const
+  {
+    return new Parser<U>(l, [&, g](State &s) {
+      return g(parse(s), s);
+    });
+  }
+
+  template <typename U>
+  Parser<U> *map(std::function<U(T, State &)> g) const
+  {
+    return map<U>("", g);
+  }
+
+  Parser<std::vector<T> > *many(bool at_least_one = false) const
+  {
+    return new Parser<std::vector<T> >([&, at_least_one](State &s) -> std::vector<T> {
+      bool once = false;
+      State _s = s;
+      std::vector<T> res;
+      try
+      {
+        while (true)
+        {
+          res.push_back(parse(s));
+          _s = s;
+          once = true;
+        }
+      }
+      catch (std::vector<State> e)
+      {
+        if (at_least_one && !once)
+        {
+          throw std::vector<State>();
+        }
+        s = _s;
+      }
+      return res;
+    });
+  }
+
+  Parser<std::vector<T> > *some() const
+  {
+    return many(true);
+  }
+};
+
+// PRIMITIVE PARSER AUXILLIARY FUNCTIONS ======================================
+namespace parser_util
+{
+  static const bool digit_pred(char c) { return std::isdigit(c); }
+  static const bool lower_pred(char c) { return std::islower(c); }
+  static const bool upper_pred(char c) { return std::isupper(c); }
+  static const bool letter_pred(char c) { return std::isalpha(c); }
+  static const bool alphanum_pred(char c) { return std::isalnum(c); }
+  static const bool space_pred(char c) { return std::isspace(c); }
+
+  static const std::string str_of_charvec(std::vector<char> res) { return std::string(res.begin(), res.end()); }
+  static const int int_of_charvec(std::vector<char> res) { return std::stoi(str_of_charvec(res)); }
+  template <typename T>
+  static const int t_of_either_ts(Either<T, T> res) { return res.left ? res.lx : res.rx; }
+
+  template<typename T, typename U, typename V>
+  static const U mid_of_three(Both<Both<T,U>,V> res) { return res.lx.rx; }
+  template<typename T, typename U>
+  static const T fst(Both<T, U> res) { return res.lx; }
+  template<typename T, typename U>
+  static const U snd(Both<T, U> res) { return res.rx; }
+};
+// PRIMITIVE PARSERS ==========================================================
+
+namespace parsers
+{
+  using namespace parser_util;
+  static const Parser<int> *empty = new Parser<int>("empty", [](State &s){ return 0; });
+
+  static const Parser<char> *sat(std::function<bool(char)> pred, std::string label = "")
+  {
+    return new Parser<char>(label, [pred](State &s) -> char {
+      if ((*s.source).size() == s.i)
+        throw std::vector<State>();
+      char c = (*s.source).at(s.i);
+      if (pred(c))
+        s.i++;
+      else
+        throw std::vector<State>();
+      return c;
+    });
+  }
+
+  static const Parser<char> *digit = sat(digit_pred, "digit");
+  static const Parser<char> *lower = sat(lower_pred, "lower");
+  static const Parser<char> *upper = sat(upper_pred, "upper");
+  static const Parser<char> *letter = sat(letter_pred, "letter");
+  static const Parser<char> *alphanum = sat(alphanum_pred, "alphanum");
+  static const Parser<char> *space = sat(space_pred, "space");
+
+  static const Parser<char> *char_match(char c)
+  {
+    return sat([c](char _c) -> bool { return _c == c; }, "char_match('" + std::string(1, c) + "')");
+  }
+  static const Parser<std::string> *string_match(std::string str)
+  {
+    return new Parser<std::string>("string_match('" + str + "')", [str](State &s) -> std::string {
+      for (char _c : str)
+      {
+        if ((*s.source).size() == s.i)
+          throw std::vector<State>();
+        char c = (*s.source).at(s.i);
+        if (c == _c)
+          s.i++;
+        else
+          throw std::vector<State>();
+      }
+      return str;
+    });
+  }
+
+  static const Parser<std::string> *ident =
+    lower
+    ->seq<std::string, std::vector<char>>(
+      "ident",
+      alphanum->many(),
+      [](char x, std::vector<char> xs) -> std::string { xs.insert(xs.begin(), x); return std::string(xs.begin(), xs.end()); });
+
+  static const Parser<std::vector<char> > *digit_some = digit->some();
+  static const Parser<int> *nat = digit_some->map<int>(int_of_charvec);
+
+  static const Parser<int> *intg =
+    ( char_match('-')
+      ->seq<int>(nat))
+    ->map<int>([](Both<char,int> res) -> int { return -res.rx;})
+    ->alt<int>(nat)
+    ->map<int>("ing", t_of_either_ts<int>);
+
+  static const Parser<std::string> *spaces =
+    space
+    ->many()
+    ->map<std::string>("spaces", str_of_charvec);
+
+  template <typename T>
+  static const Parser<T> *token(const Parser<T> *p, std::string label = "")
+  {
+    return
+      (
+        spaces
+        ->seq(p)
+        ->seq(spaces))
+      ->template map<T>(label, parser_util::mid_of_three<std::string, T, std::string>);
+  }
+  static const Parser<std::string> *identifier = token<std::string>(ident, "identifier");
+  static const Parser<int> *natural = token<int>(nat, "natural");
+  static const Parser<int> *integer = token<int>(intg, "integer");
+  static const Parser<std::string> *symbol(std::string str)
+  {
+    return token<std::string>(string_match(str), "symbol");
+  }
+};
+
+//TODO example calculator parser
+//TODO basic AST parser
+//TODO implement to_stub
+//TODO implement to_latex
+//TODO consider generalized state, adv() and clone()
+// concrete as string pointer state, string stream state
