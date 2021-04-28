@@ -25,24 +25,18 @@ class Either
 private:
   bool left; //!< flag to indicate object contains left value
 public:
-  T1 *lx; //!< left value
-  T2 *rx; //!< right value
-  /*! destructor destroys both values */
-  ~Either() {
-    delete lx;
-    delete rx;
-  }
+  T1 lx; //!< left value
+  T2 rx; //!< right value
   /*!
    * Constructor for left value
    * @param x left value
    */
   template <typename T1_, typename T2_>
-  friend Either<T1_, T2_>* Left(T1_ *x)
+  friend Either<T1_, T2_> Left(T1_ *x)
   {
-    Either<T1, T2> *e = new Either<T1, T2>();
-    e->left = true;
-    e->lx = x;
-    e->rx = nullptr;
+    Either<T1, T2> e = Either<T1, T2>();
+    e.left = true;
+    e.lx = x;
     return e;
   }
   /*!
@@ -50,12 +44,11 @@ public:
    * @param x right value
    */
   template <typename T1_, typename T2_>
-  friend Either<T1_, T2_>* Right(T2_ *x)
+  friend Either<T1_, T2_> Right(T2_ *x)
   {
-    Either<T1, T2> *e = new Either<T1, T2>();
-    e->left = false;
-    e->lx = nullptr;
-    e->rx = x;
+    Either<T1, T2> e = new Either<T1, T2>();
+    e.left = false;
+    e.rx = x;
     return e;
   }
 };
