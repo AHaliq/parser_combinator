@@ -77,4 +77,9 @@ TEST_CASE("nested both") {
     REQUIRE(b2.rx == 3);
     delete b1;
   }
+  SECTION("get mid") {
+    Both<int,int> b3(1,2);
+    Both<Both<int,int>,int> b4(b3,3);
+    REQUIRE(alg_util::get_mid(b4) == 2);
+  }
 }

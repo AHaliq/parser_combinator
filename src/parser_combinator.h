@@ -65,8 +65,27 @@ Either<T1_, T2_> Right(T2_ x)
 
 namespace alg_util
 {
+  /*!
+   * Given a three element Both, return its middle element
+   * @param b three element
+   * @return middle value
+   */
+  template <typename T, typename U, typename V>
+  U get_mid(const Both<Both<T,U>,V> &b) {
+    return b.lx.rx;
+  }
+  template <typename T, typename U, typename V>
+  U get_mid(const Both<T,Both<U,V>> &b) {
+    return b.rx.lx;
+  }
+  /*!
+   * Given an either where both sides are the same type,
+   * return either which value
+   * @param e either object
+   * @return either value
+   */
   template <typename T>
-  T get_either(Either<T, T> e)
+  T get_either(const Either<T, T> &e)
   {
     return e.left ? e.lx : e.rx;
   }
