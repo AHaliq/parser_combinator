@@ -103,13 +103,19 @@ namespace parser {
   /*!
    * State object that propagates throughout parsing
    */
-  struct State {
+  class State {
+  private:
     int i;                      //!< index to currently to be consumed character
-    std::string failure_label;  //!< label for parser failures
     std::string *src;           //!< pointer to source string to be parsed
+  public:
+    std::string failure_label;  //!< label for parser failures
     /*!
      * Construct state with pointer to source string
      */
     State(std::string *_src) : src(_src), i(0), failure_label(NON_FAILURE_LABEL) {}
+    char adv() {
+      if (i >= src->size()) throw std::vector<State>();
+      return src->at(i++);
+    }
   };
 }
