@@ -1,6 +1,7 @@
 #include "catch.hpp"
 #include "parser_combinator.h"
 
+using namespace alg;
 struct ent {
   int x;
 };
