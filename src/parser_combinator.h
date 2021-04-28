@@ -24,8 +24,8 @@ class Either
 {
 public:
   bool left; //!< flag to indicate object contains left value
-  T1 lx; //!< left value
-  T2 rx; //!< right value
+  T1 lx;     //!< left value
+  T2 rx;     //!< right value
   /*!
    * Constructor for left value
    * @param x left value
@@ -38,6 +38,11 @@ public:
    */
   template <typename T1_, typename T2_>
   friend Either<T1_, T2_> Right(T2_ *x);
+  /*!
+   * Get either value if both of same type
+   */
+  template <typename T>
+  T get_either(Either<T, T> e);
 };
 
 template <typename T1_, typename T2_>
@@ -56,4 +61,13 @@ Either<T1_, T2_> Right(T2_ x)
   e.left = false;
   e.rx = x;
   return e;
+}
+
+namespace alg_util
+{
+  template <typename T>
+  T get_either(Either<T, T> e)
+  {
+    return e.left ? e.lx : e.rx;
+  }
 }
