@@ -66,9 +66,8 @@ namespace alg
   }
 }
 
-namespace alg_util
+namespace alg::util
 {
-  using namespace alg;
   /*!
    * Given a three element Both, return its middle element
    * @param b three element

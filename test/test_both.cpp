@@ -81,6 +81,6 @@ TEST_CASE("nested both") {
   SECTION("get mid") {
     Both<int,int> b3(1,2);
     Both<Both<int,int>,int> b4(b3,3);
-    REQUIRE(alg_util::get_mid(b4) == 2);
+    REQUIRE(util::get_mid(b4) == 2);
   }
 }
