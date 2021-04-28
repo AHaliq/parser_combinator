@@ -1,6 +1,5 @@
 #include "catch.hpp"
-#include "parser_combinator2.h"
-#include <iostream>
+#include "parser_combinator.h"
 
 struct ent {
   int x;
