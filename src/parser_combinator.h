@@ -113,6 +113,10 @@ namespace parser {
      * Construct state with pointer to source string
      */
     State(std::string *_src) : src(_src), i(0), failure_label(NON_FAILURE_LABEL) {}
+    /*!
+     * advance the currently consumed character in the source string
+     * @return consumed character
+     */
     char adv() {
       if (i >= src->size()) throw std::vector<State>();
       return src->at(i++);
