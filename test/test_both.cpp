@@ -1,7 +1,7 @@
 #include "catch.hpp"
-#include "parser_combinator2.h"
-#include <iostream>
+#include "parser_combinator.h"
 
+using namespace alg;
 struct ent {
   int x;
 };
@@ -77,5 +77,10 @@ TEST_CASE("nested both") {
     REQUIRE(b2.lx == b1);
     REQUIRE(b2.rx == 3);
     delete b1;
+  }
+  SECTION("get mid") {
+    Both<int,int> b3(1,2);
+    Both<Both<int,int>,int> b4(b3,3);
+    REQUIRE(util::get_mid(b4) == 2);
   }
 }
