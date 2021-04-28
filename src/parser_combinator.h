@@ -43,7 +43,7 @@ public:
 template <typename T1_, typename T2_>
 Either<T1_, T2_> Left(T1_ x)
 {
-  Either<T1_, T2_> e = Either<T1_, T2_>();
+  Either<T1_, T2_> e;
   e.left = true;
   e.lx = x;
   return e;
@@ -52,7 +52,7 @@ Either<T1_, T2_> Left(T1_ x)
 template <typename T1_, typename T2_>
 Either<T1_, T2_> Right(T2_ x)
 {
-  Either<T1_, T2_> e = new Either<T1_, T2_>();
+  Either<T1_, T2_> e;
   e.left = false;
   e.rx = x;
   return e;
