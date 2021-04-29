@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := all
 
 cmake:
-	@mkdir -p ./build && cd ./build && cmake ../
+	@mkdir -p ./build && cd ./build && cmake -G Ninja ../
 
 build:
 	@cmake --build ./build/
