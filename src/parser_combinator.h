@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <istream>
+#include <functional>
+#include <memory>
 
 // algebraic data structures
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,7 +104,7 @@ namespace parser::alg::util
   }
 }
 
-// parser data structures
+// parser state classes
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace parser::state {
@@ -182,3 +184,36 @@ namespace parser::state {
   };
 }
 
+// parser class
+///////////////////////////////////////////////////////////////////////////////
+
+namespace parser {
+  const std::string SEQ_LABEL = "seq";
+  using namespace parser::state;
+  template <typename T, typename X = empty>
+  class Parser {
+  private:
+    const std::function<T(State<X> &)> &f;
+    const std::string &label;
+  public:
+    Parser(const std::string &_label, const std::function<T(State<X>&)> &_f) : f(_f), label(_label) {}
+    
+    T parse(State<X> &s) {
+      State<X> _s = s;
+      try {
+        return f(s);
+      } catch (std::vector<State<X>> &e) {
+        _s.fail(label);
+        e.push_back(_s);
+        throw e;
+      }
+    }
+    
+    template <typename U, typename V>
+    std::shared_ptr<Parser<V,X>> seq(const std::shared_ptr<Parser<U,X>> second, const std::function<V&(T&,U&)> &g) {
+      return std::make_shared<Parser<V,X>>(SEQ_LABEL, [&](State<X> &s) {
+        return g(this->parse(s), second.parse(s));
+      });
+    }
+  };
+}
