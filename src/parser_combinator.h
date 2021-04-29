@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <istream>
 
 // algebraic data structures
 ///////////////////////////////////////////////////////////////////////////////
@@ -98,28 +99,78 @@ namespace alg::util
 // parser data structures
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace parser {
-  const std::string NON_FAILURE_LABEL = "<not failed>";
-  /*!
-   * State object that propagates throughout parsing
-   */
+namespace parser::state {
+  static const std::string STATE_NOT_FAILED_LABEL = "<not failed>"; //!< label when state not in failure state
+  
+  /*! State object virtual class */
   class State {
-  private:
+  protected:
     int i;                      //!< index to currently to be consumed character
-    std::string *src;           //!< pointer to source string to be parsed
-  public:
+  private:
+    bool failed;                //!< flag to determine failure
     std::string failure_label;  //!< label for parser failures
+  public:
     /*!
      * Construct state with pointer to source string
      */
-    State(std::string *_src) : src(_src), i(0), failure_label(NON_FAILURE_LABEL) {}
+    State() : i(0), failed(false) {}
     /*!
-     * advance the currently consumed character in the source string
+     * Advance the currently consumed character (must be implemented by inheriting class)
      * @return consumed character
      */
-    char adv() {
+    virtual const char adv() { return 0; }
+    /*!
+     * Set state to failure with accompanying label
+     * @param label failure label
+     */
+    void fail(const std::string &&label) {
+      failed = true;
+      failure_label = label;
+    }
+    /*!
+     * Get failure flag
+     * @return flag
+     */
+    const bool has_failed() { return failed; }
+    /*!
+     * Get failure label
+     * @return failure label
+     */
+    const std::string& get_fail() {
+      return failed ? failure_label : STATE_NOT_FAILED_LABEL;
+    }
+  };
+
+  /*! State using std::string as source */
+  class StateString : State {
+  private:
+    std::string *src;           //!< pointer to source string to be parsed
+  public:
+    StateString(std::string *_src) : State(), src(_src) {}
+    const char adv() override {
       if (i >= src->size()) throw std::vector<State>();
       return src->at(i++);
     }
   };
+
+  /*! State using std::istream as source */
+  class StateIStream : State {
+  private:
+    std::istream *src;          //!< pointer to input stream used to parse
+  public:
+    StateIStream(std::istream *_src) : State(), src(_src) {}
+    const char adv() override {
+      char c;
+      try {
+        if (i != src->tellg()) src->seekg(i);
+        *src >> c;
+        if (c == 0) throw std::vector<State>();
+        i++;
+        return c;
+      } catch(std::exception e) {
+        throw std::vector<State>();
+      }
+    }
+  };
 }
+
