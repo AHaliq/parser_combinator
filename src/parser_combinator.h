@@ -5,7 +5,7 @@
 // algebraic data structures
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace alg
+namespace parser::alg
 {
   /*! Product type of two parameters */
   template <typename T1, typename T2>
@@ -66,8 +66,14 @@ namespace alg
 // algebraic util functions
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace alg::util
+namespace parser::alg::util
 {
+  /*! Returns first element of a pair */
+  template <typename T, typename U>
+  T fst(const Both<T, U> &b) { return b.lx; }
+  /*! Returns second element of a pair */
+  template <typename T, typename U>
+  U snd(const Both<T, U> &b) { return b.rx; }
   /*!
    * Given a three element Both, return its middle element
    * @param b three element
