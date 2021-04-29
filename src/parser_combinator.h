@@ -135,7 +135,7 @@ namespace parser::state {
      * Set state to failure with accompanying label
      * @param label failure label
      */
-    void fail(const std::string &&label) {
+    void fail(const std::string label) {
       failed = true;
       failure_label = label;
     }
@@ -188,30 +188,44 @@ namespace parser::state {
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace parser {
+  enum parser_type { USER, SEQ, ALT, MAP, MANY, SOME };
   const std::string SEQ_LABEL = "seq";
   using namespace parser::state;
   template <typename T, typename X = empty>
   class Parser {
   private:
-    const std::function<T(State<X> &)> &f;
-    const std::string &label;
+    const std::function<T(State<X> &)> f;
+    const std::string user_label;
+    const parser_type type;
   public:
-    Parser(const std::string &_label, const std::function<T(State<X>&)> &_f) : f(_f), label(_label) {}
+    Parser(const std::string _label, std::function<T(State<X>&)> &&_f) : f(_f), user_label(_label), type(USER) {}
+    Parser(const parser_type _type, std::function<T(State<X>&)> &&_f): f(_f), type(_type) {}
     
+    std::string get_label() {
+      switch(type) {
+        case USER: return user_label;
+        case SEQ: return "seq";
+        case ALT: return "alt";
+        case MAP: return "map";
+        case MANY: return "many";
+        case SOME: return "some";
+      }
+    }
+
     T parse(State<X> &s) {
       State<X> _s = s;
       try {
         return f(s);
       } catch (std::vector<State<X>> &e) {
-        _s.fail(label);
+        _s.fail(get_label());
         e.push_back(_s);
         throw e;
       }
     }
     
     template <typename U, typename V>
-    std::shared_ptr<Parser<V,X>> seq(const std::shared_ptr<Parser<U,X>> second, const std::function<V&(T&,U&)> &g) {
-      return std::make_shared<Parser<V,X>>(SEQ_LABEL, [&](State<X> &s) {
+    std::shared_ptr<Parser<V,X>> seq(const std::shared_ptr<Parser<U,X>> second, const std::function<V(T,U)> &&g) {
+      return std::make_shared<Parser<V,X>>(SEQ_LABEL, [this,g,second](State<X> &s) {
         return g(this->parse(s), second.parse(s));
       });
     }
