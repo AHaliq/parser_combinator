@@ -173,15 +173,11 @@ namespace parser::state {
     StateIStream(std::istream *_src) : State<X>(), src(_src) {}
     const char adv() override {
       char c;
-      try {
-        if (this->i != src->tellg()) src->seekg(this->i);
-        *src >> c;
-        if (c == 0) throw std::vector<State<X>>();
-        this->i++;
-        return c;
-      } catch(std::exception e) {
-        throw std::vector<State<X>>();
-      }
+      if (this->i != src->tellg()) src->seekg(this->i);
+      *src >> c;
+      if (c == 0) throw std::vector<State<X>>();
+      this->i++;
+      return c;
     }
   };
 }
