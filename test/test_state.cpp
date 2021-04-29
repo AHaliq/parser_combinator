@@ -5,13 +5,15 @@
 #include <fstream>
 #include <stdio.h>
 
-using namespace parser::state;
+using State = parser::state::State<>;
+using StateString = parser::state::StateString<>;
+using StateIStream = parser::state::StateIStream<>;
 
 TEST_CASE("state base class") {
   State s;
   REQUIRE(s.adv() == 0);
   REQUIRE_FALSE(s.has_failed());
-  REQUIRE(s.get_fail() == STATE_NOT_FAILED_LABEL);
+  REQUIRE(s.get_fail() == parser::state::STATE_NOT_FAILED_LABEL);
   s.fail("test");
   REQUIRE(s.has_failed());
   REQUIRE(s.get_fail() == "test");
