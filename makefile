@@ -1,4 +1,4 @@
-.PHONY: cmake build run docs test all clean
+.PHONY: cmake build run docs test all clean retest rerun
 .DEFAULT_GOAL := all
 
 cmake:
@@ -21,3 +21,7 @@ clean:
 	@rm -rf docs
 
 all: clean docs cmake build run
+
+retest: cmake build test
+
+rerun: cmake build run
