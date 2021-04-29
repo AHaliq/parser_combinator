@@ -107,8 +107,9 @@ namespace parser::alg::util
 
 namespace parser::state {
   static const std::string STATE_NOT_FAILED_LABEL = "<not failed>"; //!< label when state not in failure state
-  
+  struct empty {}; //!< empty struct for default user data in state
   /*! State object virtual class */
+  template <typename X = empty>
   class State {
   protected:
     int i;                      //!< index to currently to be consumed character
@@ -116,6 +117,7 @@ namespace parser::state {
     bool failed;                //!< flag to determine failure
     std::string failure_label;  //!< label for parser failures
   public:
+    X data;                     //!< user data
     /*!
      * Construct state with pointer to source string
      */
@@ -148,33 +150,35 @@ namespace parser::state {
   };
 
   /*! State using std::string as source */
-  class StateString : State {
+  template <typename X = empty>
+  class StateString : public State<X> {
   private:
     std::string *src;           //!< pointer to source string to be parsed
   public:
-    StateString(std::string *_src) : State(), src(_src) {}
+    StateString(std::string *_src) : State<X>(), src(_src) {}
     const char adv() override {
-      if (i >= src->size()) throw std::vector<State>();
-      return src->at(i++);
+      if (this->i >= src->size()) throw std::vector<State<X>>();
+      return src->at(this->i++);
     }
   };
 
   /*! State using std::istream as source */
-  class StateIStream : State {
+  template <typename X = empty>
+  class StateIStream : public State<X> {
   private:
     std::istream *src;          //!< pointer to input stream used to parse
   public:
-    StateIStream(std::istream *_src) : State(), src(_src) {}
+    StateIStream(std::istream *_src) : State<X>(), src(_src) {}
     const char adv() override {
       char c;
       try {
-        if (i != src->tellg()) src->seekg(i);
+        if (this->i != src->tellg()) src->seekg(this->i);
         *src >> c;
-        if (c == 0) throw std::vector<State>();
-        i++;
+        if (c == 0) throw std::vector<State<X>>();
+        this->i++;
         return c;
       } catch(std::exception e) {
-        throw std::vector<State>();
+        throw std::vector<State<X>>();
       }
     }
   };
