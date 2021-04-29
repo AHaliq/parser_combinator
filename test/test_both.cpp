@@ -1,7 +1,7 @@
 #include "catch.hpp"
 #include "parser_combinator.h"
 
-using namespace alg;
+using namespace parser::alg;
 struct ent {
   int x;
 };
@@ -66,6 +66,12 @@ TEST_CASE("closure construction") {
     REQUIRE(*b.rx == 2);
     delete b.rx;
   }
+}
+
+TEST_CASE("both getters") {
+  Both<int, std::string> b(1, "hey");
+  REQUIRE(util::fst(b) == 1);
+  REQUIRE(util::snd(b) == "hey");
 }
 
 TEST_CASE("nested both") {
