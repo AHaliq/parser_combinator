@@ -11,7 +11,7 @@ using StateIStream = parser::state::StateIStream<>;
 
 TEST_CASE("state base class") {
   State s;
-  REQUIRE(s.adv() == 0);
+  REQUIRE_THROWS(s.adv());
   REQUIRE_FALSE(s.has_failed());
   REQUIRE(s.get_fail() == parser::state::STATE_NOT_FAILED_LABEL);
   s.fail("test");

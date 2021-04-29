@@ -126,7 +126,9 @@ namespace parser::state {
      * Advance the currently consumed character (must be implemented by inheriting class)
      * @return consumed character
      */
-    virtual const char adv() { return 0; }
+    virtual const char adv() {
+      throw std::vector<State<X>>();
+    }
     /*!
      * Set state to failure with accompanying label
      * @param label failure label
