@@ -191,6 +191,7 @@ namespace parser::state {
 
 namespace parser {
   using namespace parser::state;
+  using namespace alg;
 
   enum parser_type { USER, SEQ, ALT, MAP, MANY, SOME }; //!< parser type values
   const std::string label_str[] = { "seq", "alt", "map", "many", "some"}; //!< mapping parser type to string
@@ -236,6 +237,12 @@ namespace parser {
       return std::make_shared<Parser<V,X>>(SEQ, [this,second,g](State<X> &s) -> V {
         return g(this->parse(s), second->parse(s));
       }, std::vector<ParserMetaData const*>{ &this->metadata, &second->metadata });
+    }
+
+    /*! Sequential parser generator with default Both result combiner */
+    template <typename U>
+    std::shared_ptr<Parser<Both<T,U>,X>> seq(const std::shared_ptr<Parser<U,X>> second) {
+      return seq<char,Both<T,U>>(second, [](T x, U y) { return Both<T,U>(x,y); });
     }
   };
 }
