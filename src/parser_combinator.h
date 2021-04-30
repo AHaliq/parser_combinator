@@ -108,8 +108,10 @@ namespace parser::alg::util
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace parser::state {
-  static const std::string STATE_NOT_FAILED_LABEL = "<not failed>"; //!< label when state not in failure state
+  const std::string STATE_NOT_FAILED_LABEL = "<not failed>"; //!< label when state not in failure state
+  
   struct empty {}; //!< empty struct for default user data in state
+
   /*! State object virtual class */
   template <typename X = empty>
   class State {
@@ -117,7 +119,7 @@ namespace parser::state {
     int i;                      //!< index to currently to be consumed character
   private:
     bool failed;                //!< flag to determine failure
-    std::string failure_label;  //!< label for parser failures
+    int fail_uuid;              //!< uuid of failing parser
   public:
     X data;                     //!< user data
     /*!
@@ -135,9 +137,11 @@ namespace parser::state {
      * Set state to failure with accompanying label
      * @param label failure label
      */
-    void fail(const std::string label) {
-      failed = true;
-      failure_label = label;
+    void fail(const int id) {
+      if(!failed) {
+        failed = true;
+        fail_uuid = id;
+      }
     }
     /*!
      * Get failure flag
@@ -145,12 +149,10 @@ namespace parser::state {
      */
     const bool has_failed() { return failed; }
     /*!
-     * Get failure label
-     * @return failure label
+     * Get failure parser uuid
+     * @return failure id
      */
-    const std::string& get_fail() {
-      return failed ? failure_label : STATE_NOT_FAILED_LABEL;
-    }
+    const int get_fail() { return failed ? fail_uuid : -1; }
   };
 
   /*! State using std::string as source */
@@ -188,46 +190,55 @@ namespace parser::state {
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace parser {
-  enum parser_type { USER, SEQ, ALT, MAP, MANY, SOME };
-  const std::string SEQ_LABEL = "seq";
   using namespace parser::state;
+
+  enum parser_type { USER, SEQ, ALT, MAP, MANY, SOME }; //!< parser type values
+  const std::string label_str[] = { "seq", "alt", "map", "many", "some"}; //!< mapping parser type to string
+
+  /*! Class for parser metadata inclusive of unique id and children parser metadata */
+  class ParserMetaData {
+  public:
+    const int uuid;
+    const std::string user_label;
+    const parser_type type;
+    const std::vector<ParserMetaData*> children;
+    ParserMetaData(std::string _label, std::vector<ParserMetaData*> _children = {}) : uuid(__COUNTER__), user_label(_label), type(USER), children(_children) {}
+    ParserMetaData(parser_type _type, std::vector<ParserMetaData*> _children = {}) : uuid(__COUNTER__), type(_type), children(_children) {}
+  };
+
+  /*! Parser base class */
   template <typename T, typename X = empty>
   class Parser {
   private:
-    const std::function<T(State<X> &)> f;
-    const std::string user_label;
-    const parser_type type;
+    const std::function<T(State<X> &)> f; //!< core function
   public:
-    Parser(const std::string _label, std::function<T(State<X>&)> &&_f) : f(_f), user_label(_label), type(USER) {}
-    Parser(const parser_type _type, std::function<T(State<X>&)> &&_f): f(_f), type(_type) {}
-    
-    std::string get_label() {
-      switch(type) {
-        case USER: return user_label;
-        case SEQ: return "seq";
-        case ALT: return "alt";
-        case MAP: return "map";
-        case MANY: return "many";
-        case SOME: return "some";
-      }
-    }
+    const ParserMetaData metadata;        //!< metadata object
+    /*! Constructor for user labelled type parser */
+    Parser(const std::string _label, std::function<T(State<X>&)> &&_f, std::vector<ParserMetaData*> _children = {}) : f(_f), metadata(ParserMetaData(_label, _children)) {}
+    /*! Construtor for library standard type parser */
+    Parser(const parser_type _type, std::function<T(State<X>&)> &&_f, std::vector<ParserMetaData*> _children = {}): f(_f), metadata(ParserMetaData(_type, _children)) {}
 
+    /*! Perform the parse given a state */
     T parse(State<X> &s) {
       State<X> _s = s;
       try {
         return f(s);
       } catch (std::vector<State<X>> &e) {
-        _s.fail(get_label());
+        _s.fail(metadata.uuid);
         e.push_back(_s);
         throw e;
       }
     }
     
+    /*! Method chain to generate sequential parser from current parser */
     template <typename U, typename V>
     std::shared_ptr<Parser<V,X>> seq(const std::shared_ptr<Parser<U,X>> second, const std::function<V(T,U)> &&g) {
-      return std::make_shared<Parser<V,X>>(SEQ_LABEL, [this,g,second](State<X> &s) {
+      return std::make_shared<Parser<V,X>>(SEQ, [this,g,second](State<X> &s) {
         return g(this->parse(s), second.parse(s));
-      });
+      }, { &this->metadata, &second->metadata });
     }
   };
 }
+//TODO metadata is graph via children as adjlist
+//TODO to print metadata stack, will need to make mapping from uuid to metadata
+  // each State in stack trace will lookup the mapping

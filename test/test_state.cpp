@@ -13,10 +13,10 @@ TEST_CASE("state base class") {
   State s;
   REQUIRE_THROWS(s.adv());
   REQUIRE_FALSE(s.has_failed());
-  REQUIRE(s.get_fail() == parser::state::STATE_NOT_FAILED_LABEL);
-  s.fail("test");
+  REQUIRE(s.get_fail() == -1);
+  s.fail(123);
   REQUIRE(s.has_failed());
-  REQUIRE(s.get_fail() == "test");
+  REQUIRE(s.get_fail() == 123);
 }
 
 TEST_CASE("state string") {

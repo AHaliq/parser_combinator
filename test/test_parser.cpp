@@ -27,7 +27,7 @@ TEST_CASE("parser base class") {
       REQUIRE(false);
     } catch (std::vector<State> &e) {
       REQUIRE(e[0].has_failed());
-      REQUIRE(e[0].get_fail() == "test");
+      REQUIRE(e[0].get_fail() == p2.metadata.uuid);
     }
   }
 }
