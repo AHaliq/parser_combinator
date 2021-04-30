@@ -4,30 +4,55 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <memory>
 
 using namespace fakeit;
 using State = parser::state::State<>;
 using StateString = parser::state::StateString<>;
 
+TEST_CASE("metadata") {
+  SECTION("metadata user") {
+    parser::Parser<char> p("test", [](State &s) -> char { return 'k'; });
+    REQUIRE(p.metadata.type == parser::USER);
+    REQUIRE(p.metadata.user_label == "test");
+    REQUIRE(p.metadata.children == std::vector<parser::ParserMetaData const*>());
+  }
+  SECTION("metadata non user") {
+    parser::Parser<char> p(parser::SEQ, [](State &s) -> char { return 'k'; });
+    REQUIRE(p.metadata.type == parser::SEQ);
+    REQUIRE(p.metadata.children == std::vector<parser::ParserMetaData const*>());
+  }
+}
+
 TEST_CASE("parser base class") {
   SECTION("core function success") {
     std::string str = "kool";
-    StateString s1(&str);
-    StateString s2(&str);
-    
-    parser::Parser<char> p1("test", [](State &s) -> char { return 'k'; });
-    REQUIRE(p1.parse(s1) == 'k');
+    StateString s(&str);
+    parser::Parser<char> p("test", [](State &s) -> char { return 'k'; });
+    REQUIRE(p.parse(s) == 'k');
   }
   SECTION("core function failure") {
     std::string str = "kool";
-    StateString s2(&str);
-    parser::Parser<char> p2("test", [](State &s) -> char { throw std::vector<State>(); });
+    StateString s(&str);
+    parser::Parser<char> p("test", [](State &s) -> char { throw std::vector<State>(); });
     try {
-      p2.parse(s2);
+      p.parse(s);
       REQUIRE(false);
     } catch (std::vector<State> &e) {
       REQUIRE(e[0].has_failed());
-      REQUIRE(e[0].get_fail() == p2.metadata.uuid);
+      REQUIRE(e[0].get_fail() == p.metadata.uuid);
     }
   }
+}
+
+TEST_CASE("parser seq") {
+    parser::Parser<char> p1("test1", [](State &s) -> char { return 'o'; });
+    std::shared_ptr<parser::Parser<char>> p2 = std::make_shared<parser::Parser<char>>("test2", [](State &s) -> char { return 'k'; });
+    std::shared_ptr<parser::Parser<std::string>> p3 = p1.seq<char,std::string>(p2, [](char a, char b) -> std::string { return std::string(1,a) + std::string(1,b); });
+
+    State s;
+    REQUIRE(p3->parse(s) == "ok");
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::SEQ);
 }

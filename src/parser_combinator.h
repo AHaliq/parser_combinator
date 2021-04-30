@@ -134,8 +134,8 @@ namespace parser::state {
       throw std::vector<State<X>>();
     }
     /*!
-     * Set state to failure with accompanying label
-     * @param label failure label
+     * Set state to failure with parser uuid
+     * @param id failure uuid
      */
     void fail(const int id) {
       if(!failed) {
@@ -201,9 +201,9 @@ namespace parser {
     const int uuid;
     const std::string user_label;
     const parser_type type;
-    const std::vector<ParserMetaData*> children;
-    ParserMetaData(std::string _label, std::vector<ParserMetaData*> _children = {}) : uuid(__COUNTER__), user_label(_label), type(USER), children(_children) {}
-    ParserMetaData(parser_type _type, std::vector<ParserMetaData*> _children = {}) : uuid(__COUNTER__), type(_type), children(_children) {}
+    const std::vector<ParserMetaData const*> children;
+    ParserMetaData(std::string _label, std::vector<ParserMetaData const*> _children = {}) : uuid(__COUNTER__), user_label(_label), type(USER), children(_children) {}
+    ParserMetaData(parser_type _type, std::vector<ParserMetaData const*> _children = {}) : uuid(__COUNTER__), type(_type), children(_children) {}
   };
 
   /*! Parser base class */
@@ -214,9 +214,9 @@ namespace parser {
   public:
     const ParserMetaData metadata;        //!< metadata object
     /*! Constructor for user labelled type parser */
-    Parser(const std::string _label, std::function<T(State<X>&)> &&_f, std::vector<ParserMetaData*> _children = {}) : f(_f), metadata(ParserMetaData(_label, _children)) {}
+    Parser(const std::string _label, std::function<T(State<X>&)> _f, std::vector<ParserMetaData const*> _children = {}) : f(_f), metadata(ParserMetaData(_label, _children)) {}
     /*! Construtor for library standard type parser */
-    Parser(const parser_type _type, std::function<T(State<X>&)> &&_f, std::vector<ParserMetaData*> _children = {}): f(_f), metadata(ParserMetaData(_type, _children)) {}
+    Parser(const parser_type _type, std::function<T(State<X>&)> _f, std::vector<ParserMetaData const*> _children = {}): f(_f), metadata(ParserMetaData(_type, _children)) {}
 
     /*! Perform the parse given a state */
     T parse(State<X> &s) {
@@ -232,10 +232,10 @@ namespace parser {
     
     /*! Method chain to generate sequential parser from current parser */
     template <typename U, typename V>
-    std::shared_ptr<Parser<V,X>> seq(const std::shared_ptr<Parser<U,X>> second, const std::function<V(T,U)> &&g) {
-      return std::make_shared<Parser<V,X>>(SEQ, [this,g,second](State<X> &s) {
-        return g(this->parse(s), second.parse(s));
-      }, { &this->metadata, &second->metadata });
+    std::shared_ptr<Parser<V,X>> seq(const std::shared_ptr<Parser<U,X>> second, const std::function<V(T,U)> g) {
+      return std::make_shared<Parser<V,X>>(SEQ, [this,second,g](State<X> &s) -> V {
+        return g(this->parse(s), second->parse(s));
+      }, std::vector<ParserMetaData const*>{ &this->metadata, &second->metadata });
     }
   };
 }
