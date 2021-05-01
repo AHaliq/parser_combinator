@@ -238,3 +238,30 @@ TEST_CASE("parser alt")
     REQUIRE(p3->metadata.type == parser::ALT);
   }
 }
+
+TEST_CASE("parser many") {
+  SECTION("many fold success") {
+
+  }
+  SECTION("many fold fail") {
+
+  }
+  SECTION("many vector success") {
+
+  }
+  SECTION("many vector fail") {
+
+  }
+  SECTION("some success") {
+
+  }
+  SECTION("some fail") {
+
+  }
+  SECTION("many vector operator") {
+
+  }
+  SECTION("some operator") {
+    
+  }
+}

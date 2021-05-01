@@ -218,11 +218,10 @@ namespace parser
     SEQ,
     ALT,
     MAP,
-    MANY,
-    SOME
+    MANY
   };
   /*! mapping parser type to string */
-  const std::string label_str[] = {"seq", "alt", "map", "many", "some"};
+  const std::string label_str[] = {"seq", "alt", "map", "many"};
 
   /*! class for parser metadata, info for parse errors and parse graphs */
   class ParserMetaData
@@ -416,12 +415,108 @@ namespace parser
 
     // repetition method chains -----------------------------------------------
 
-    // user defined fold
+    /*!
+     * Perform parse multiple times
+     * folding the returning results into a single value
+     * @param fold  fold function taking in current result and accumulation val
+     * @param start starting accumulation value
+     * @param min   minimum number of results to consider successful parse
+     * @return      pointer to many parser
+     */
+    template <typename U>
+    std::shared_ptr<Parser<U, X>> many(
+        std::function<U(T, U)> fold, U start, int min = 0)
+    {
+      return std::make_shared<Parser<U, X>>(
+          MANY,
+          [this, fold, start, min](State<X> &s) -> U {
+            State<X> _s = s;
+            U cur = start;
+            int count = 0;
+            try
+            {
+              while (true)
+              {
+                cur = fold(parse(s), cur);
+                _s = s;
+                count++;
+              }
+            }
+            catch (std::vector<State<X>> &e)
+            {
+              if (count < min)
+              {
+                throw e;
+              }
+              else
+              {
+                s = _s;
+                return cur;
+              }
+            }
+          });
+    }
 
-    // default to vector accumulation
+    /*!
+     * Perform parse multiple times
+     * accumulating values into a vector
+     * @param min   minimum number of results to consider successful parse
+     * @return      pointer to many parser
+     */
+    std::shared_ptr<Parser<std::vector<T>, X>> many(int min = 0)
+    {
+      return std::make_shared<Parser<std::vector<T>, X>>(
+          MANY,
+          [this, min](State<X> &s) -> std::vector<T> {
+            State<X> _s = s;
+            std::vector<T> res;
+            try
+            {
+              while (true)
+              {
+                res.push_back(parse(s));
+                _s = s;
+              }
+            }
+            catch (std::vector<State<X>> &e)
+            {
+              if (res.size() < min)
+              {
+                throw e;
+              }
+              else
+              {
+                s = _s;
+                return res;
+              }
+            }
+          });
+    }
 
-      // arg with minimum repetitions (default to 0)
-      // some sugar for minimum 1
+    /*!
+     * Sugar for many with minimum 1 result
+     * @return  pointer to many parser
+     */
+    std::shared_ptr<Parser<std::vector<T>, X>> some() {
+      return many(1);
+    }
+
+    /*!
+     * Operator shorthand for many vector accumulation
+     * @param min   minimum number of results to consider successful parse
+     * @return      pointer to many parser
+     */
+    std::shared_ptr<Parser<std::vector<T>, X>> operator+(int min) {
+      return many(min);
+    }
+
+    /*!
+     * Operator shorthand for many vector accumulation with minimum 1 result
+     * @return    pointer to many parser
+     */
+    std::shared_ptr<Parser<std::vector<T>, X>> operator++() {
+      return some();
+    }
 
     // map method chains ------------------------------------------------------
 
@@ -431,19 +526,33 @@ namespace parser
   // shared_ptr operators -----------------------------------------------------
 
   template <typename T, typename U, typename X>
-  std::shared_ptr<Parser<Both<T,U>,X>> operator&(
-    const std::shared_ptr<Parser<T, X>> first,
-    const std::shared_ptr<Parser<U, X>> second)
+  std::shared_ptr<Parser<Both<T, U>, X>> operator&(
+      const std::shared_ptr<Parser<T, X>> first,
+      const std::shared_ptr<Parser<U, X>> second)
   {
     return first->seq(second);
   }
 
   template <typename T, typename X>
   std::shared_ptr<Parser<T, X>> operator|(
-    const std::shared_ptr<Parser<T, X>> first,
-    const std::shared_ptr<Parser<T, X>> second)
+      const std::shared_ptr<Parser<T, X>> first,
+      const std::shared_ptr<Parser<T, X>> second)
   {
     return first->alt(second);
+  }
+
+  template <typename T, typename X>
+  std::shared_ptr<Parser<std::vector<T>, X>> operator+(
+    const std::shared_ptr<Parser<T, X>> first,int min)
+  {
+    return first->many(min);
+  }
+
+  template <typename T, typename X>
+  std::shared_ptr<Parser<std::vector<T>, X>> operator++(
+    const std::shared_ptr<Parser<T, X>> first)
+  {
+    return first->some();
   }
 }
 //TODO metadata is graph via children as adjlist
