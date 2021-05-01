@@ -14,50 +14,61 @@ using P = parser::Parser<T>;
 template <typename T>
 using PP = std::shared_ptr<parser::Parser<T>>;
 
-using empty_md = std::vector<parser::ParserMetaData const*>;
+using empty_md = std::vector<parser::ParserMetaData const *>;
 
-TEST_CASE("metadata") {
-  SECTION("metadata user") {
+TEST_CASE("metadata")
+{
+  SECTION("metadata user")
+  {
     P<char> p("test", [](State &s) -> char { return 'k'; });
     REQUIRE(p.metadata.type == parser::USER);
     REQUIRE(p.metadata.user_label == "test");
     REQUIRE(p.metadata.children == empty_md());
   }
-  SECTION("metadata non user") {
+  SECTION("metadata non user")
+  {
     P<char> p(parser::SEQ, [](State &s) -> char { return 'k'; });
     REQUIRE(p.metadata.type == parser::SEQ);
     REQUIRE(p.metadata.children == empty_md());
   }
 }
 
-TEST_CASE("parser base class") {
-  SECTION("core function success") {
+TEST_CASE("parser base class")
+{
+  SECTION("core function success")
+  {
     std::string str = "kool";
     StateString s(&str);
     P<char> p("test", [](State &s) { return 'k'; });
     REQUIRE(p.parse(s) == 'k');
   }
-  SECTION("core function failure") {
+  SECTION("core function failure")
+  {
     std::string str = "kool";
     StateString s(&str);
     P<char> p("test", [](State &s) -> char { throw std::vector<State>(); });
-    try {
+    try
+    {
       p.parse(s);
       REQUIRE(false);
-    } catch (std::vector<State> &e) {
+    }
+    catch (std::vector<State> &e)
+    {
       REQUIRE(e[0].has_failed());
       REQUIRE(e[0].get_fail() == p.metadata.uuid);
     }
   }
 }
 
-TEST_CASE("parser seq") {
-  SECTION("seq general") {
+TEST_CASE("parser seq")
+{
+  SECTION("seq general")
+  {
     P<char> p1("test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
-      "test2", [](State &s) { return 'k'; });
-    PP<std::string> p3 = p1.seq<char,std::string>(
-      p2, [](char a, char b) { return std::string(1,a) + std::string(1,b); });
+        "test2", [](State &s) { return 'k'; });
+    PP<std::string> p3 = p1.seq<char, std::string>(
+        p2, [](char a, char b) { return std::string(1, a) + std::string(1, b); });
 
     State s;
     REQUIRE(p3->parse(s) == "ok");
@@ -65,43 +76,46 @@ TEST_CASE("parser seq") {
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
-  SECTION("seq both") {
+  SECTION("seq both")
+  {
     P<char> p1("test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
-      "test2", [](State &s) { return 'k'; });
-    PP<parser::alg::Both<char,char>> p3 = p1.seq(p2);
+        "test2", [](State &s) { return 'k'; });
+    PP<parser::alg::Both<char, char>> p3 = p1.seq(p2);
 
     State s;
-    parser::alg::Both<char,char> res = p3->parse(s);
+    parser::alg::Both<char, char> res = p3->parse(s);
     REQUIRE(res.lx == 'o');
     REQUIRE(res.rx == 'k');
     REQUIRE(p3->metadata.children[0] == &p1.metadata);
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
-  SECTION("seq both class method operator") {
+  SECTION("seq both class method operator")
+  {
     P<char> p1("test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
-      "test2", [](State &s) -> char { return 'k'; });
-    PP<parser::alg::Both<char,char>> p3 = p1 & p2;
+        "test2", [](State &s) -> char { return 'k'; });
+    PP<parser::alg::Both<char, char>> p3 = p1 & p2;
 
     State s;
-    parser::alg::Both<char,char> res = p3->parse(s);
+    parser::alg::Both<char, char> res = p3->parse(s);
     REQUIRE(res.lx == 'o');
     REQUIRE(res.rx == 'k');
     REQUIRE(p3->metadata.children[0] == &p1.metadata);
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
-  SECTION("seq both shared_ptr operator") {
+  SECTION("seq both shared_ptr operator")
+  {
     PP<char> p1 = std::make_shared<P<char>>(
-      "test1", [](State &s) { return 'o'; });
+        "test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
-      "test2", [](State &s) { return 'k'; });
-    PP<parser::alg::Both<char,char>> p3 = p1 & p2;
+        "test2", [](State &s) { return 'k'; });
+    PP<parser::alg::Both<char, char>> p3 = p1 & p2;
 
     State s;
-    parser::alg::Both<char,char> res = p3->parse(s);
+    parser::alg::Both<char, char> res = p3->parse(s);
     REQUIRE(res.lx == 'o');
     REQUIRE(res.rx == 'k');
     REQUIRE(p3->metadata.children[0] == &p1->metadata);
@@ -110,26 +124,117 @@ TEST_CASE("parser seq") {
   }
 }
 
-TEST_CASE("parser alt") {
-  SECTION("alt general both") {
-    
-  }
-  SECTION("alt general left") {
+TEST_CASE("parser alt")
+{
+  SECTION("alt general both")
+  {
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<parser::alg::Either<char,char>> p3 = p1.alt<char>(p2);
 
+    State s;
+    parser::alg::Either<char, char> res = p3->parse(s);
+    REQUIRE(res.left);
+    REQUIRE(res.lx == 'o');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
   }
-  SECTION("alt general right") {
+  SECTION("alt general left")
+  {
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) -> char { throw std::vector<State>(); });
+    PP<parser::alg::Either<char,char>> p3 = p1.alt<char>(p2);
 
+    State s;
+    parser::alg::Either<char, char> res = p3->parse(s);
+    REQUIRE(res.left);
+    REQUIRE(res.lx == 'o');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
   }
-  SECTION("alt same type both") {
+  SECTION("alt general right")
+  {
+    P<char> p1("test1", [](State &s) -> char { throw std::vector<State>(); });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<parser::alg::Either<char,char>> p3 = p1.alt<char>(p2);
 
+    State s;
+    parser::alg::Either<char, char> res = p3->parse(s);
+    REQUIRE_FALSE(res.left);
+    REQUIRE(res.rx == 'k');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
   }
-  SECTION("alt same type left") {
+  SECTION("alt same type both")
+  {
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<char> p3 = p1.alt(p2);
 
+    State s;
+    REQUIRE(p3->parse(s) == 'o');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
   }
-  SECTION("alt same type right") {
+  SECTION("alt same type left")
+  {
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) -> char { throw std::vector<State>(); });
+    PP<char> p3 = p1.alt(p2);
 
+    State s;
+    REQUIRE(p3->parse(s) == 'o');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
   }
-  SECTION("alt same type operator") {
+  SECTION("alt same type right")
+  {
+    P<char> p1("test1", [](State &s) -> char { throw std::vector<State>(); });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<char> p3 = p1.alt(p2);
 
+    State s;
+    REQUIRE(p3->parse(s) == 'k');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
+  }
+  SECTION("alt same type method operator")
+  {
+    P<char> p1("test1", [](State &s) -> char { throw std::vector<State>(); });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<char> p3 = p1 | p2;
+
+    State s;
+    REQUIRE(p3->parse(s) == 'k');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
+  }
+  SECTION("alt same type shared_ptr operator")
+  {
+    PP<char> p1 = std::make_shared<P<char>>(
+      "test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) -> char { throw std::vector<State>(); });
+    PP<char> p3 = p1 | p2;
+
+    State s;
+    REQUIRE(p3->parse(s) == 'o');
+    REQUIRE(p3->metadata.children[0] == &p1->metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::ALT);
   }
 }

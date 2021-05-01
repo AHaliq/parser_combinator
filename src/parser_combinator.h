@@ -369,11 +369,11 @@ namespace parser
             State<X> _s = s;
             try
             {
-              return Left(this->parse(s));
+              return Left<T, U>(this->parse(s));
             }
             catch (std::vector<State<X>> &e)
             {
-              return Right(second->parse(_s));
+              return Right<T, U>(second->parse(_s));
             }
           },
           metadata_list{&this->metadata, &second->metadata});
@@ -437,7 +437,16 @@ namespace parser
   {
     return first->seq(second);
   }
+
+  template <typename T, typename X>
+  std::shared_ptr<Parser<T, X>> operator|(
+    const std::shared_ptr<Parser<T, X>> first,
+    const std::shared_ptr<Parser<T, X>> second)
+  {
+    return first->alt(second);
+  }
 }
 //TODO metadata is graph via children as adjlist
 //TODO to print metadata stack, will need to make mapping from uuid to metadata
 // each State in stack trace will lookup the mapping
+//TODO change parser::alg::util to parser::maps, and make parser::combiners
