@@ -227,7 +227,8 @@ namespace parser
   /*! class for parser metadata, info for parse errors and parse graphs */
   class ParserMetaData
   {
-  using metadata_list = std::vector<ParserMetaData const *>;
+    using metadata_list = std::vector<ParserMetaData const *>;
+
   public:
     const int uuid;               //!< unique identifier
     const std::string user_label; //!< parser user label
@@ -239,20 +240,25 @@ namespace parser
      * @param _children vector of pointers to children metadata
      */
     ParserMetaData(
-      std::string _label,
-      metadata_list _children = {}
-    ) : uuid(__COUNTER__), user_label(_label), type(USER), children(_children)
-    {}
+        std::string _label,
+        metadata_list _children = {}) : uuid(__COUNTER__),
+                                        user_label(_label),
+                                        type(USER),
+                                        children(_children)
+    {
+    }
     /*!
      * Constructor with library parser type
      * @param _type     parser type enum value
      * @param _children vector of pointers to children metadata
      */
     ParserMetaData(
-      parser_type _type,
-      metadata_list _children = {}
-    ) : uuid(__COUNTER__), type(_type), children(_children)
-    {}
+        parser_type _type,
+        metadata_list _children = {}) : uuid(__COUNTER__),
+                                        type(_type),
+                                        children(_children)
+    {
+    }
   };
 
   using metadata_list = std::vector<ParserMetaData const *>;
@@ -267,18 +273,18 @@ namespace parser
     const ParserMetaData metadata; //!< metadata object
     /*! Constructor for user labelled type parser */
     Parser(
-      const std::string _label,
-      std::function<T(State<X> &)> _f,
-      metadata_list _children = {}
-    ) : f(_f), metadata(ParserMetaData(_label, _children))
-    {}
+        const std::string _label,
+        std::function<T(State<X> &)> _f,
+        metadata_list _children = {}) : f(_f), metadata(ParserMetaData(_label, _children))
+    {
+    }
     /*! Construtor for library standard type parser */
     Parser(
-      const parser_type _type,
-      std::function<T(State<X> &)> _f,
-      metadata_list _children = {}
-    ) : f(_f), metadata(ParserMetaData(_type, _children))
-    {}
+        const parser_type _type,
+        std::function<T(State<X> &)> _f,
+        metadata_list _children = {}) : f(_f), metadata(ParserMetaData(_type, _children))
+    {
+    }
 
     /*!
      * Perform the parse given a state
@@ -310,16 +316,15 @@ namespace parser
      */
     template <typename U, typename V>
     std::shared_ptr<Parser<V, X>> seq(
-      const std::shared_ptr<Parser<U, X>> second,
-      const std::function<V(T, U)> g
-    ) {
+        const std::shared_ptr<Parser<U, X>> second,
+        const std::function<V(T, U)> g)
+    {
       return std::make_shared<Parser<V, X>>(
-        SEQ,
-        [this, second, g](State<X> &s) -> V {
-          return g(this->parse(s), second->parse(s));
-        },
-        metadata_list{&this->metadata, &second->metadata}
-      );
+          SEQ,
+          [this, second, g](State<X> &s) -> V {
+            return g(this->parse(s), second->parse(s));
+          },
+          metadata_list{&this->metadata, &second->metadata});
     }
 
     /*!
@@ -329,11 +334,10 @@ namespace parser
      */
     template <typename U>
     std::shared_ptr<Parser<Both<T, U>, X>> seq(
-      const std::shared_ptr<Parser<U, X>> second
-    ) {
+        const std::shared_ptr<Parser<U, X>> second)
+    {
       return seq<char, Both<T, U>>(
-        second, [](T x, U y) { return Both<T, U>(x, y); }
-      );
+          second, [](T x, U y) { return Both<T, U>(x, y); });
     }
 
     /*!
@@ -342,9 +346,9 @@ namespace parser
      * @return        pointer to seq parser
      */
     template <typename U>
-    std::shared_ptr<Parser<Both<T, U>, X>> operator>(
-      const std::shared_ptr<Parser<U, X>> second
-    ) {
+    std::shared_ptr<Parser<Both<T, U>, X>> operator&(
+        const std::shared_ptr<Parser<U, X>> second)
+    {
       return seq(second);
     }
 
@@ -357,23 +361,22 @@ namespace parser
      */
     template <typename U>
     std::shared_ptr<Parser<Either<T, U>, X>> alt(
-      const std::shared_ptr<Parser<U, X>> second
-    ) {
+        const std::shared_ptr<Parser<U, X>> second)
+    {
       return std::make_shared<Parser<Either<T, U>, X>>(
-        ALT,
-        [this, second](State<X> &s) -> Either<T, U> {
-          State<X> _s = s;
-          try
-          {
-            return Left(this->parse(s));
-          }
-          catch (std::vector<State<X>> &e)
-          {
-            return Right(second->parse(_s));
-          }
-        },
-        metadata_list{&this->metadata, &second->metadata}
-      );
+          ALT,
+          [this, second](State<X> &s) -> Either<T, U> {
+            State<X> _s = s;
+            try
+            {
+              return Left(this->parse(s));
+            }
+            catch (std::vector<State<X>> &e)
+            {
+              return Right(second->parse(_s));
+            }
+          },
+          metadata_list{&this->metadata, &second->metadata});
     }
 
     /*!
@@ -382,23 +385,22 @@ namespace parser
      * @return        pointer to alt parser
      */
     std::shared_ptr<Parser<T, X>> alt(
-      const std::shared_ptr<Parser<T, X>> second
-    ) {
+        const std::shared_ptr<Parser<T, X>> second)
+    {
       return std::make_shared<Parser<T, X>>(
-        ALT,
-        [this, second](State<X> &s) -> T {
-          State<X> _s = s;
-          try
-          {
-            return this->parse(s);
-          }
-          catch (std::vector<State<X>> &e)
-          {
-            return second->parse(_s);
-          }
-        },
-        metadata_list{&this->metadata, &second->metadata}
-      );
+          ALT,
+          [this, second](State<X> &s) -> T {
+            State<X> _s = s;
+            try
+            {
+              return this->parse(s);
+            }
+            catch (std::vector<State<X>> &e)
+            {
+              return second->parse(_s);
+            }
+          },
+          metadata_list{&this->metadata, &second->metadata});
     }
 
     /*!
@@ -407,11 +409,34 @@ namespace parser
      * @return        pointer to alt parser
      */
     std::shared_ptr<Parser<T, X>> operator|(
-      const std::shared_ptr<Parser<T, X>> second
-    ) {
+        const std::shared_ptr<Parser<T, X>> second)
+    {
       return alt(second);
     }
+
+    // repetition method chains -----------------------------------------------
+
+    // user defined fold
+
+    // default to vector accumulation
+
+      // arg with minimum repetitions (default to 0)
+      // some sugar for minimum 1
+
+    // map method chains ------------------------------------------------------
+
+    // capture method chain ---------------------------------------------------
   };
+
+  // shared_ptr operators -----------------------------------------------------
+
+  template <typename T, typename U, typename X>
+  std::shared_ptr<Parser<Both<T,U>,X>> operator&(
+    const std::shared_ptr<Parser<T, X>> first,
+    const std::shared_ptr<Parser<U, X>> second)
+  {
+    return first->seq(second);
+  }
 }
 //TODO metadata is graph via children as adjlist
 //TODO to print metadata stack, will need to make mapping from uuid to metadata

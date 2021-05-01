@@ -9,18 +9,24 @@
 using namespace fakeit;
 using State = parser::state::State<>;
 using StateString = parser::state::StateString<>;
+template <typename T>
+using P = parser::Parser<T>;
+template <typename T>
+using PP = std::shared_ptr<parser::Parser<T>>;
+
+using empty_md = std::vector<parser::ParserMetaData const*>;
 
 TEST_CASE("metadata") {
   SECTION("metadata user") {
-    parser::Parser<char> p("test", [](State &s) -> char { return 'k'; });
+    P<char> p("test", [](State &s) -> char { return 'k'; });
     REQUIRE(p.metadata.type == parser::USER);
     REQUIRE(p.metadata.user_label == "test");
-    REQUIRE(p.metadata.children == std::vector<parser::ParserMetaData const*>());
+    REQUIRE(p.metadata.children == empty_md());
   }
   SECTION("metadata non user") {
-    parser::Parser<char> p(parser::SEQ, [](State &s) -> char { return 'k'; });
+    P<char> p(parser::SEQ, [](State &s) -> char { return 'k'; });
     REQUIRE(p.metadata.type == parser::SEQ);
-    REQUIRE(p.metadata.children == std::vector<parser::ParserMetaData const*>());
+    REQUIRE(p.metadata.children == empty_md());
   }
 }
 
@@ -28,13 +34,13 @@ TEST_CASE("parser base class") {
   SECTION("core function success") {
     std::string str = "kool";
     StateString s(&str);
-    parser::Parser<char> p("test", [](State &s) -> char { return 'k'; });
+    P<char> p("test", [](State &s) { return 'k'; });
     REQUIRE(p.parse(s) == 'k');
   }
   SECTION("core function failure") {
     std::string str = "kool";
     StateString s(&str);
-    parser::Parser<char> p("test", [](State &s) -> char { throw std::vector<State>(); });
+    P<char> p("test", [](State &s) -> char { throw std::vector<State>(); });
     try {
       p.parse(s);
       REQUIRE(false);
@@ -47,9 +53,11 @@ TEST_CASE("parser base class") {
 
 TEST_CASE("parser seq") {
   SECTION("seq general") {
-    parser::Parser<char> p1("test1", [](State &s) -> char { return 'o'; });
-    std::shared_ptr<parser::Parser<char>> p2 = std::make_shared<parser::Parser<char>>("test2", [](State &s) -> char { return 'k'; });
-    std::shared_ptr<parser::Parser<std::string>> p3 = p1.seq<char,std::string>(p2, [](char a, char b) -> std::string { return std::string(1,a) + std::string(1,b); });
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+      "test2", [](State &s) { return 'k'; });
+    PP<std::string> p3 = p1.seq<char,std::string>(
+      p2, [](char a, char b) { return std::string(1,a) + std::string(1,b); });
 
     State s;
     REQUIRE(p3->parse(s) == "ok");
@@ -58,9 +66,10 @@ TEST_CASE("parser seq") {
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
   SECTION("seq both") {
-    parser::Parser<char> p1("test1", [](State &s) -> char { return 'o'; });
-    std::shared_ptr<parser::Parser<char>> p2 = std::make_shared<parser::Parser<char>>("test2", [](State &s) -> char { return 'k'; });
-    std::shared_ptr<parser::Parser<parser::alg::Both<char,char>>> p3 = p1.seq(p2);
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+      "test2", [](State &s) { return 'k'; });
+    PP<parser::alg::Both<char,char>> p3 = p1.seq(p2);
 
     State s;
     parser::alg::Both<char,char> res = p3->parse(s);
@@ -70,10 +79,11 @@ TEST_CASE("parser seq") {
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
-  SECTION("seq both operator") {
-    parser::Parser<char> p1("test1", [](State &s) -> char { return 'o'; });
-    std::shared_ptr<parser::Parser<char>> p2 = std::make_shared<parser::Parser<char>>("test2", [](State &s) -> char { return 'k'; });
-    std::shared_ptr<parser::Parser<parser::alg::Both<char,char>>> p3 = p1 > p2;
+  SECTION("seq both class method operator") {
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+      "test2", [](State &s) -> char { return 'k'; });
+    PP<parser::alg::Both<char,char>> p3 = p1 & p2;
 
     State s;
     parser::alg::Both<char,char> res = p3->parse(s);
@@ -82,5 +92,44 @@ TEST_CASE("parser seq") {
     REQUIRE(p3->metadata.children[0] == &p1.metadata);
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
+  }
+  SECTION("seq both shared_ptr operator") {
+    PP<char> p1 = std::make_shared<P<char>>(
+      "test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+      "test2", [](State &s) { return 'k'; });
+    PP<parser::alg::Both<char,char>> p3 = p1 & p2;
+
+    State s;
+    parser::alg::Both<char,char> res = p3->parse(s);
+    REQUIRE(res.lx == 'o');
+    REQUIRE(res.rx == 'k');
+    REQUIRE(p3->metadata.children[0] == &p1->metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::SEQ);
+  }
+}
+
+TEST_CASE("parser alt") {
+  SECTION("alt general both") {
+    
+  }
+  SECTION("alt general left") {
+
+  }
+  SECTION("alt general right") {
+
+  }
+  SECTION("alt same type both") {
+
+  }
+  SECTION("alt same type left") {
+
+  }
+  SECTION("alt same type right") {
+
+  }
+  SECTION("alt same type operator") {
+
   }
 }
