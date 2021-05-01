@@ -514,7 +514,7 @@ namespace parser
      * Operator shorthand for many vector accumulation with minimum 1 result
      * @return    pointer to many parser
      */
-    std::shared_ptr<Parser<std::vector<T>, X>> operator++() {
+    std::shared_ptr<Parser<std::vector<T>, X>> operator++(int _) {
       return some();
     }
 
@@ -550,7 +550,7 @@ namespace parser
 
   template <typename T, typename X>
   std::shared_ptr<Parser<std::vector<T>, X>> operator++(
-    const std::shared_ptr<Parser<T, X>> first)
+    const std::shared_ptr<Parser<T, X>> first, int _)
   {
     return first->some();
   }

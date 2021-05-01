@@ -131,7 +131,7 @@ TEST_CASE("parser alt")
     P<char> p1("test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
         "test2", [](State &s) { return 'k'; });
-    PP<parser::alg::Either<char,char>> p3 = p1.alt<char>(p2);
+    PP<parser::alg::Either<char, char>> p3 = p1.alt<char>(p2);
 
     State s;
     parser::alg::Either<char, char> res = p3->parse(s);
@@ -146,7 +146,7 @@ TEST_CASE("parser alt")
     P<char> p1("test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
         "test2", [](State &s) -> char { throw std::vector<State>(); });
-    PP<parser::alg::Either<char,char>> p3 = p1.alt<char>(p2);
+    PP<parser::alg::Either<char, char>> p3 = p1.alt<char>(p2);
 
     State s;
     parser::alg::Either<char, char> res = p3->parse(s);
@@ -161,7 +161,7 @@ TEST_CASE("parser alt")
     P<char> p1("test1", [](State &s) -> char { throw std::vector<State>(); });
     PP<char> p2 = std::make_shared<P<char>>(
         "test2", [](State &s) { return 'k'; });
-    PP<parser::alg::Either<char,char>> p3 = p1.alt<char>(p2);
+    PP<parser::alg::Either<char, char>> p3 = p1.alt<char>(p2);
 
     State s;
     parser::alg::Either<char, char> res = p3->parse(s);
@@ -226,7 +226,7 @@ TEST_CASE("parser alt")
   SECTION("alt same type shared_ptr operator")
   {
     PP<char> p1 = std::make_shared<P<char>>(
-      "test1", [](State &s) { return 'o'; });
+        "test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
         "test2", [](State &s) -> char { throw std::vector<State>(); });
     PP<char> p3 = p1 | p2;
@@ -239,29 +239,72 @@ TEST_CASE("parser alt")
   }
 }
 
-TEST_CASE("parser many") {
-  SECTION("many fold success") {
-
+TEST_CASE("parser many")
+{
+  State s;
+  int count = 0;
+  PP<char> p1 = std::make_shared<P<char>>(
+      "test1", [&count](State &s) {
+        if (count < 3)
+        {
+          count++;
+          return 'a';
+        }
+        else
+        {
+          throw std::vector<State>();
+        }
+      });
+  SECTION("many fold success")
+  {
+    count = 0;
+    std::string str = "";
+    REQUIRE(p1->many<std::string>(
+                  [](char c, std::string st) {
+                    return st + c;
+                  },
+                  "")
+                ->parse(s) == "aaa");
   }
-  SECTION("many fold fail") {
-
+  SECTION("many fold fail")
+  {
+    count = 0;
+    std::string str = "";
+    REQUIRE_THROWS(p1->many<std::string>(
+                  [](char c, std::string st) {
+                    return st + c;
+                  },
+                  "", 5)
+                ->parse(s));
   }
-  SECTION("many vector success") {
-
+  SECTION("many vector success")
+  {
+    count = 0;
+    REQUIRE(p1->many()->parse(s) == std::vector<char>{'a','a','a'});
   }
-  SECTION("many vector fail") {
-
+  SECTION("many vector fail")
+  {
+    count = 0;
+    REQUIRE_THROWS(p1->many(5)->parse(s));
   }
-  SECTION("some success") {
-
+  SECTION("some success")
+  {
+    count = 0;
+    REQUIRE(p1->some()->parse(s) == std::vector<char>{'a','a','a'});
   }
-  SECTION("some fail") {
-
+  SECTION("some fail")
+  {
+    count = 5;
+    REQUIRE_THROWS(p1->some()->parse(s));
   }
-  SECTION("many vector operator") {
-
+  SECTION("many vector operator")
+  {
+    count = 0;
+    REQUIRE((p1 + 0) ->parse(s) == std::vector<char>{'a','a','a'});
   }
-  SECTION("some operator") {
-    
+  SECTION("some operator")
+  {
+    count = 0;
+    REQUIRE(p1 ++ ->parse(s) == std::vector<char>{'a','a','a'});
   }
 }
