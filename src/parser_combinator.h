@@ -454,7 +454,8 @@ namespace parser
                 return cur;
               }
             }
-          });
+          },
+          metadata_list{ &this->metadata });
     }
 
     /*!
@@ -490,7 +491,8 @@ namespace parser
                 return res;
               }
             }
-          });
+          },
+          metadata_list{ &this->metadata });
     }
 
     /*!
@@ -519,6 +521,16 @@ namespace parser
     }
 
     // map method chains ------------------------------------------------------
+
+    template <typename U>
+    std::shared_ptr<Parser<U, X>> map(std::function<U(T)> g) {
+      return std::make_shared<Parser<U, X>>(
+        MAP,
+        [this, g](State<X> &s) -> U {
+          return g(parse(s));
+        },
+        metadata_list{ &this->metadata });
+    }
 
     // capture method chain ---------------------------------------------------
   };

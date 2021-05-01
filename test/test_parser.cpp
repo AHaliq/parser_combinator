@@ -300,11 +300,19 @@ TEST_CASE("parser many")
   SECTION("many vector operator")
   {
     count = 0;
-    REQUIRE((p1 + 0) ->parse(s) == std::vector<char>{'a','a','a'});
+    REQUIRE((p1 + 3) ->parse(s) == std::vector<char>{'a','a','a'});
   }
   SECTION("some operator")
   {
     count = 0;
     REQUIRE(p1 ++ ->parse(s) == std::vector<char>{'a','a','a'});
+  }
+}
+
+TEST_CASE("map parser") {
+  State s;
+  P<int> p1("test1", [](State &s) { return 1; });
+  SECTION("base map") {
+    REQUIRE(p1.map<int>([](int x) -> int { return x + 1; })->parse(s) == 2);
   }
 }
