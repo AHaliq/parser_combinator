@@ -252,19 +252,24 @@ TEST_CASE("parser alt")
     REQUIRE(get_second(res) == 1);
   }
   SECTION("alt both different type fail") {
-    //TODO
+    PP<EitherAll<char,int>> p3 = pinv.alt_both<int>(ppinvi);
+    REQUIRE_THROWS(p3->parse(s));
   }
   SECTION("alt both same type both") {
-    //TODO
+    PP<std::vector<char>> p3 = po.alt_both(ppk);
+    REQUIRE(p3->parse(s) == std::vector<char>{'o','k'});
   }
   SECTION("alt both same type left") {
-    //TODO
+    PP<std::vector<char>> p3 = po.alt_both(ppinv);
+    REQUIRE(p3->parse(s) == std::vector<char>{'o'});
   }
   SECTION("alt both same type right") {
-    //TODO 
+    PP<std::vector<char>> p3 = pinv.alt_both(ppk);
+    REQUIRE(p3->parse(s) == std::vector<char>{'k'});
   }
   SECTION("alt both same type fail") {
-    //TODO
+    PP<std::vector<char>> p3 = pinv.alt_both(ppinv);
+    REQUIRE(p3->parse(s) == std::vector<char>());
   }
   SECTION("alt same type method operator")
   {
@@ -283,13 +288,16 @@ TEST_CASE("parser alt")
     REQUIRE(p3->metadata.type == parser::ALT);
   }
   SECTION("alt both same type operator") {
-    //TODO
+    PP<std::vector<char>> p3 = po || ppk;
+    REQUIRE(p3->parse(s) == std::vector<char>{ 'o', 'k' });
   }
   SECTION("alt both same type vector chaining operator") {
-    //TODO
+    PP<std::vector<char>> p3 = po || ppk || ppo;
+    REQUIRE(p3->parse(s) == std::vector<char>{ 'o', 'k', 'o' });
   }
   SECTION("alt both same type vector chaining operator fail") {
-    //TODO
+    PP<std::vector<char>> p3 = pinv || ppinv || ppinv;
+    REQUIRE(p3->parse(s) == std::vector<char>());
   }
 }
 

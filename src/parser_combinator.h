@@ -577,6 +577,12 @@ namespace parser
             try
             {
               res.push_back(this->parse(s));
+            }
+            catch (std::vector<State<X>> &e)
+            {
+            }
+            try
+            {
               res.push_back(second->parse(_s));
             }
             catch (std::vector<State<X>> &e)
@@ -789,16 +795,20 @@ namespace parser
       const std::shared_ptr<Parser<T, X>> second)
   {
     return std::make_shared<Parser<std::vector<T>, X>>(
-      ALT,
-      [first,second](State<X> &s) -> std::vector<T> {
-        State<X> _s = s;
-        std::vector<T> res = first->parse(s);
-        try {
-          res.push_back(second->parse(_s));
-        } catch(std::vector<State<X>> &e) {}
-        return res;
-      },
-      metadata_list{&first->metadata, &second->metadata});
+        ALT,
+        [first, second](State<X> &s) -> std::vector<T> {
+          State<X> _s = s;
+          std::vector<T> res = first->parse(s);
+          try
+          {
+            res.push_back(second->parse(_s));
+          }
+          catch (std::vector<State<X>> &e)
+          {
+          }
+          return res;
+        },
+        metadata_list{&first->metadata, &second->metadata});
   }
 
   template <typename T, typename X>
