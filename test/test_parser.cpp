@@ -91,6 +91,31 @@ TEST_CASE("parser seq")
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
+  SECTION("seq skip") {
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<char> p3 = p1.seq_skip(p2);
+
+    State s;
+    REQUIRE(p3->parse(s) == 'k');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::SEQ);
+  }
+  SECTION("seq skip operator") {
+    PP<char> p1 = std::make_shared<P<char>>(
+        "test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<char> p3 = p1 > p2;
+
+    State s;
+    REQUIRE(p3->parse(s) == 'k');
+    REQUIRE(p3->metadata.children[0] == &p1->metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::SEQ);
+  }
   SECTION("seq both class method operator")
   {
     P<char> p1("test1", [](State &s) { return 'o'; });

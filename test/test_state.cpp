@@ -8,6 +8,7 @@
 using State = parser::state::State<>;
 using StateString = parser::state::StateString<>;
 using StateIStream = parser::state::StateIStream<>;
+using StateStreamBuf = parser::state::StateStreamBuf<>;
 
 TEST_CASE("state base class") {
   State s;
@@ -95,6 +96,42 @@ TEST_CASE("state file stream") {
     s1 = s2;
     REQUIRE(s1.adv() == 'e');
     file.close();
+    remove("test.txt");
+  }
+}
+
+TEST_CASE("state streambuf") {
+  SECTION("standard parse") {
+    const char sentence[] = "hello";
+    std::filebuf pbuf;
+    pbuf.open("test.txt", std::ios_base::out);
+    pbuf.sputn(sentence, sizeof(sentence) - 1);
+    pbuf.close();
+    pbuf.open("test.txt", std::ios_base::in);
+    StateStreamBuf s1(&pbuf);
+    REQUIRE(s1.adv() == 'h');
+    REQUIRE(s1.adv() == 'e');
+    REQUIRE(s1.adv() == 'l');
+    REQUIRE(s1.adv() == 'l');
+    REQUIRE(s1.adv() == 'o');
+    REQUIRE_THROWS(s1.adv());
+    pbuf.close();
+    remove("test.txt");
+  }
+  SECTION("jump parse") {
+    const char sentence[] = "hello";
+    std::filebuf pbuf;
+    pbuf.open("test.txt", std::ios_base::out);
+    pbuf.sputn(sentence, sizeof(sentence) - 1);
+    pbuf.close();
+    pbuf.open("test.txt", std::ios_base::in);
+    StateStreamBuf s1(&pbuf);
+    REQUIRE(s1.adv() == 'h');
+    StateStreamBuf s2 = s1;
+    REQUIRE(s1.adv() == 'e');
+    s1 = s2;
+    REQUIRE(s1.adv() == 'e');
+    pbuf.close();
     remove("test.txt");
   }
 }

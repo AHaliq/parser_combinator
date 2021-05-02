@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <istream>
+#include <streambuf>
+#include <ios>
 #include <functional>
 #include <memory>
 
@@ -201,6 +203,27 @@ namespace parser::state
       return c;
     }
   };
+
+  /*! State using std::streambuf as source */
+  template <typename X = empty>
+  class StateStreamBuf : public State<X>
+  {
+    private:
+      std::streambuf *src;  //!< pointer to streambuf used to parse
+    public:
+      StateStreamBuf(std::streambuf *_src): State<X>(), src(_src) {}
+      const char adv() override
+      {
+        char c;
+        if (this->i != src->pubseekoff(0, std::ios_base::cur))
+          src->pubseekpos(this->i);
+        c = src->sbumpc();
+        if (c == -1)
+          throw std::vector<State<X>>();
+        this->i++;
+        return c;
+      }
+  };
 }
 
 // parser class
@@ -340,6 +363,24 @@ namespace parser
     }
 
     /*!
+     * Seq returning only the second parser result
+     * @param second  next parsre to sequence
+     * @return        pointer to seq parser
+     */
+    template <typename U>
+    std::shared_ptr<Parser<U, X>> seq_skip(
+        const std::shared_ptr<Parser<U, X>> second)
+    {
+      return std::make_shared<Parser<U, X>>(
+          SEQ,
+          [this, second](State<X> &s) -> U {
+            this->parse(s);
+            return second->parse(s);
+          },
+          metadata_list{&this->metadata, &second->metadata});
+    }
+
+    /*!
      * Operator shorthand for seq using Both
      * @param second  next parser to sequence
      * @return        pointer to seq parser
@@ -349,6 +390,18 @@ namespace parser
         const std::shared_ptr<Parser<U, X>> second)
     {
       return seq(second);
+    }
+
+    /*!
+     * Operator shorthand for seq_skip
+     * @param second  next parser to sequence
+     * @return        pointer to seq parser
+     */
+    template <typename U>
+    std::shared_ptr<Parser<U, X>> operator>(
+      const std::shared_ptr<Parser<U, X>> second)
+    {
+      return seq_skip(second);
     }
 
     // alt method chains ------------------------------------------------------
@@ -455,7 +508,7 @@ namespace parser
               }
             }
           },
-          metadata_list{ &this->metadata });
+          metadata_list{&this->metadata});
     }
 
     /*!
@@ -492,14 +545,15 @@ namespace parser
               }
             }
           },
-          metadata_list{ &this->metadata });
+          metadata_list{&this->metadata});
     }
 
     /*!
      * Sugar for many with minimum 1 result
      * @return  pointer to many parser
      */
-    std::shared_ptr<Parser<std::vector<T>, X>> some() {
+    std::shared_ptr<Parser<std::vector<T>, X>> some()
+    {
       return many(1);
     }
 
@@ -508,7 +562,8 @@ namespace parser
      * @param min   minimum number of results to consider successful parse
      * @return      pointer to many parser
      */
-    std::shared_ptr<Parser<std::vector<T>, X>> operator+(int min) {
+    std::shared_ptr<Parser<std::vector<T>, X>> operator+(int min)
+    {
       return many(min);
     }
 
@@ -516,20 +571,22 @@ namespace parser
      * Operator shorthand for many vector accumulation with minimum 1 result
      * @return    pointer to many parser
      */
-    std::shared_ptr<Parser<std::vector<T>, X>> operator++(int _) {
+    std::shared_ptr<Parser<std::vector<T>, X>> operator++(int _)
+    {
       return some();
     }
 
     // map method chains ------------------------------------------------------
 
     template <typename U>
-    std::shared_ptr<Parser<U, X>> map(std::function<U(T)> g) {
+    std::shared_ptr<Parser<U, X>> map(std::function<U(T)> g)
+    {
       return std::make_shared<Parser<U, X>>(
-        MAP,
-        [this, g](State<X> &s) -> U {
-          return g(parse(s));
-        },
-        metadata_list{ &this->metadata });
+          MAP,
+          [this, g](State<X> &s) -> U {
+            return g(parse(s));
+          },
+          metadata_list{&this->metadata});
     }
 
     // capture method chain ---------------------------------------------------
@@ -545,6 +602,14 @@ namespace parser
     return first->seq(second);
   }
 
+  template <typename T, typename U, typename X>
+  std::shared_ptr<Parser<U, X>> operator>(
+    const std::shared_ptr<Parser<T, X>> first,
+    const std::shared_ptr<Parser<U, X>> second)
+  {
+    return first->seq_skip(second);
+  }
+
   template <typename T, typename X>
   std::shared_ptr<Parser<T, X>> operator|(
       const std::shared_ptr<Parser<T, X>> first,
@@ -555,14 +620,14 @@ namespace parser
 
   template <typename T, typename X>
   std::shared_ptr<Parser<std::vector<T>, X>> operator+(
-    const std::shared_ptr<Parser<T, X>> first,int min)
+      const std::shared_ptr<Parser<T, X>> first, int min)
   {
     return first->many(min);
   }
 
   template <typename T, typename X>
   std::shared_ptr<Parser<std::vector<T>, X>> operator++(
-    const std::shared_ptr<Parser<T, X>> first, int _)
+      const std::shared_ptr<Parser<T, X>> first, int _)
   {
     return first->some();
   }
