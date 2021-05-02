@@ -1,12 +1,10 @@
 #include "catch.hpp"
-#include "fakeit.hpp"
 #include "parser_combinator.h"
 #include <functional>
 #include <string>
 #include <vector>
 #include <memory>
 
-using namespace fakeit;
 using namespace parser::alg;
 using State = parser::state::State<>;
 using StateString = parser::state::StateString<>;
