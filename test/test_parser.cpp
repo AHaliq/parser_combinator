@@ -380,6 +380,7 @@ TEST_CASE("map parser") {
     REQUIRE(p1.map(inc)->parse(s) == 2);
   }
   SECTION("map operator method") {
+    REQUIRE((p1 % inc) -> parse(s) == 2);
     REQUIRE((p2 % inc) -> parse(s) == 4);
   }
 }
