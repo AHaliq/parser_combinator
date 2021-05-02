@@ -18,6 +18,8 @@ namespace parser::alg
   public:
     T1 lx; //!< left value
     T2 rx; //!< right value
+    /*! default constructor used by EitherAll */
+    Both() {}
     /*!
      * Constructor for both values
      * @param _lx left value
@@ -34,6 +36,7 @@ namespace parser::alg
     bool left; //!< flag to indicate object contains left value
     T1 lx;     //!< left value
     T2 rx;     //!< right value
+    Either() {}
     /*!
      * Constructor for left value
      * @param x left value
@@ -47,6 +50,32 @@ namespace parser::alg
     template <typename T1_, typename T2_>
     friend Either<T1_, T2_> Right(T2_ *x);
   };
+
+  /*! Either both or one of either type */
+  template <typename T1, typename T2>
+  using EitherAll = Either<Both<T1, T2>, Either<T1, T2>>;
+  /*! Check if EitherAll has first value */
+  template <typename T1, typename T2>
+  bool first_exists(EitherAll<T1, T2> &e) { return e.left || e.rx.left; }
+  /*! Check if EitherAll has second value */
+  template <typename T1, typename T2>
+  bool second_exists(EitherAll<T1, T2> &e) { return e.left || !e.rx.left; }
+  /*! Trys to return first value of EitherAll */
+  template <typename T1, typename T2>
+  T1 get_first(EitherAll<T1, T2> &e)
+  {
+    if (e.left)
+      return e.lx.lx;
+    return e.rx.lx;
+  }
+  /*! Trys to return second value of EitherAll*/
+  template <typename T1, typename T2>
+  T2 get_second(EitherAll<T1, T2> &e)
+  {
+    if (e.left)
+      return e.lx.rx;
+    return e.rx.rx;
+  }
 
   template <typename T1_, typename T2_>
   Either<T1_, T2_> Left(T1_ x)
@@ -487,6 +516,78 @@ namespace parser
     }
 
     /*!
+     * Alt using EitherAll taking both or either results
+     * @param second  next parser to use
+     * @return        pointer to alt parser
+     */
+    template <typename U>
+    std::shared_ptr<Parser<EitherAll<T, U>, X>> alt_both(
+        const std::shared_ptr<Parser<U, X>> second)
+    {
+      return std::make_shared<Parser<EitherAll<T, U>, X>>(
+          ALT,
+          [this, second](State<X> &s) -> EitherAll<T, U> {
+            State<X> _s = s;
+            T res1;
+            U res2;
+            bool has1 = false;
+            try
+            {
+              res1 = this->parse(s);
+              has1 = true;
+            }
+            catch (std::vector<State<X>> &e)
+            {
+            }
+            try
+            {
+              res2 = second->parse(_s);
+              if (!has1)
+                return Right<Both<T, U>, Either<T, U>>(Right<T, U>(res2));
+            }
+            catch (std::vector<State<X>> &e)
+            {
+              if (has1)
+              {
+                return Right<Both<T, U>, Either<T, U>>(Left<T, U>(res1));
+              }
+              else
+              {
+                throw e;
+              }
+            }
+            return Left<Both<T, U>, Either<T, U>>(Both<T, U>(res1, res2));
+          },
+          metadata_list{&this->metadata, &second->metadata});
+    }
+
+    /*!
+     * Alt using a vector collecting all possible alternative parses
+     * @param second  next parser
+     * @return        pointer to alt parser
+     */
+    std::shared_ptr<Parser<std::vector<T>, X>> alt_both(
+        const std::shared_ptr<Parser<T, X>> second)
+    {
+      return std::make_shared<Parser<std::vector<T>, X>>(
+          ALT,
+          [this, second](State<X> &s) -> std::vector<T> {
+            State<X> _s = s;
+            std::vector<T> res;
+            try
+            {
+              res.push_back(this->parse(s));
+              res.push_back(second->parse(_s));
+            }
+            catch (std::vector<State<X>> &e)
+            {
+            }
+            return res;
+          },
+          metadata_list{&this->metadata, &second->metadata});
+    }
+
+    /*!
      * Operator shorthand for alt for both of same return type
      * @param second  next parser to use if first fails
      * @return        pointer to alt parser
@@ -495,6 +596,17 @@ namespace parser
         const std::shared_ptr<Parser<T, X>> second)
     {
       return alt(second);
+    }
+
+    /*!
+     * Operator shorthand for alt both parser of same type collected in vector
+     * @param second  next parser to use
+     * @return        pointer to alt parser
+     */
+    std::shared_ptr<Parser<std::vector<T>, X>> operator||(
+        const std::shared_ptr<Parser<T, X>> second)
+    {
+      return alt_both(second);
     }
 
     // repetition method chains -----------------------------------------------
@@ -664,6 +776,32 @@ namespace parser
   }
 
   template <typename T, typename X>
+  std::shared_ptr<Parser<std::vector<T>, X>> operator||(
+      const std::shared_ptr<Parser<T, X>> first,
+      const std::shared_ptr<Parser<T, X>> second)
+  {
+    return first->alt_both(second);
+  }
+
+  template <typename T, typename X>
+  std::shared_ptr<Parser<std::vector<T>, X>> operator||(
+      const std::shared_ptr<Parser<std::vector<T>, X>> first,
+      const std::shared_ptr<Parser<T, X>> second)
+  {
+    return std::make_shared<Parser<std::vector<T>, X>>(
+      ALT,
+      [first,second](State<X> &s) -> std::vector<T> {
+        State<X> _s = s;
+        std::vector<T> res = first->parse(s);
+        try {
+          res.push_back(second->parse(_s));
+        } catch(std::vector<State<X>> &e) {}
+        return res;
+      },
+      metadata_list{&first->metadata, &second->metadata});
+  }
+
+  template <typename T, typename X>
   std::shared_ptr<Parser<std::vector<T>, X>> operator+(
       const std::shared_ptr<Parser<T, X>> first, int min)
   {
@@ -679,8 +817,8 @@ namespace parser
 
   template <typename T, typename U, typename X>
   std::shared_ptr<Parser<U, X>> operator%(
-    const std::shared_ptr<Parser<T, X>> first,
-    std::function<U(T)> g)
+      const std::shared_ptr<Parser<T, X>> first,
+      std::function<U(T)> g)
   {
     return first->map(g);
   }
