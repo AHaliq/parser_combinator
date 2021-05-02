@@ -340,7 +340,7 @@ TEST_CASE("map parser") {
   PP<int> p2 = std::make_shared<P<int>>("test2", [](State &s) { return 3; });
   std::function<int(int)> inc = [](int x) -> int { return x + 1; };
   SECTION("base map") {
-    REQUIRE(p1.map<int>(inc)->parse(s) == 2);
+    REQUIRE(p1.map(inc)->parse(s) == 2);
   }
   SECTION("map operator method") {
     REQUIRE((p2 % inc) -> parse(s) == 4);
