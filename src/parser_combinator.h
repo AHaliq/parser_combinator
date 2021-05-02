@@ -208,21 +208,21 @@ namespace parser::state
   template <typename X = empty>
   class StateStreamBuf : public State<X>
   {
-    private:
-      std::streambuf *src;  //!< pointer to streambuf used to parse
-    public:
-      StateStreamBuf(std::streambuf *_src): State<X>(), src(_src) {}
-      const char adv() override
-      {
-        char c;
-        if (this->i != src->pubseekoff(0, std::ios_base::cur))
-          src->pubseekpos(this->i);
-        c = src->sbumpc();
-        if (c == -1)
-          throw std::vector<State<X>>();
-        this->i++;
-        return c;
-      }
+  private:
+    std::streambuf *src; //!< pointer to streambuf used to parse
+  public:
+    StateStreamBuf(std::streambuf *_src) : State<X>(), src(_src) {}
+    const char adv() override
+    {
+      char c;
+      if (this->i != src->pubseekoff(0, std::ios_base::cur))
+        src->pubseekpos(this->i);
+      c = src->sbumpc();
+      if (c == -1)
+        throw std::vector<State<X>>();
+      this->i++;
+      return c;
+    }
   };
 }
 
@@ -399,7 +399,7 @@ namespace parser
      */
     template <typename U>
     std::shared_ptr<Parser<U, X>> operator>(
-      const std::shared_ptr<Parser<U, X>> second)
+        const std::shared_ptr<Parser<U, X>> second)
     {
       return seq_skip(second);
     }
@@ -604,8 +604,8 @@ namespace parser
 
   template <typename T, typename U, typename X>
   std::shared_ptr<Parser<U, X>> operator>(
-    const std::shared_ptr<Parser<T, X>> first,
-    const std::shared_ptr<Parser<U, X>> second)
+      const std::shared_ptr<Parser<T, X>> first,
+      const std::shared_ptr<Parser<U, X>> second)
   {
     return first->seq_skip(second);
   }
