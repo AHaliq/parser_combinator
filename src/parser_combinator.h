@@ -589,6 +589,12 @@ namespace parser
           metadata_list{&this->metadata});
     }
 
+    template <typename U>
+    std::shared_ptr<Parser<U, X>> operator%(std::function<U(T)> g)
+    {
+      return map(g);
+    }
+
     // capture method chain ---------------------------------------------------
   };
 
@@ -630,6 +636,14 @@ namespace parser
       const std::shared_ptr<Parser<T, X>> first, int _)
   {
     return first->some();
+  }
+
+  template <typename T, typename U, typename X>
+  std::shared_ptr<Parser<U, X>> operator%(
+    const std::shared_ptr<Parser<T, X>> first,
+    std::function<U(T)> g)
+  {
+    return first->map(g);
   }
 }
 //TODO metadata is graph via children as adjlist

@@ -337,7 +337,12 @@ TEST_CASE("parser many")
 TEST_CASE("map parser") {
   State s;
   P<int> p1("test1", [](State &s) { return 1; });
+  PP<int> p2 = std::make_shared<P<int>>("test2", [](State &s) { return 3; });
+  std::function<int(int)> inc = [](int x) -> int { return x + 1; };
   SECTION("base map") {
-    REQUIRE(p1.map<int>([](int x) -> int { return x + 1; })->parse(s) == 2);
+    REQUIRE(p1.map<int>(inc)->parse(s) == 2);
+  }
+  SECTION("map operator method") {
+    REQUIRE((p2 % inc) -> parse(s) == 4);
   }
 }
