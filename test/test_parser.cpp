@@ -91,11 +91,11 @@ TEST_CASE("parser seq")
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
-  SECTION("seq skip") {
+  SECTION("seq ignore fst") {
     P<char> p1("test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
         "test2", [](State &s) { return 'k'; });
-    PP<char> p3 = p1.seq_skip(p2);
+    PP<char> p3 = p1.seq_ignore_fst(p2);
 
     State s;
     REQUIRE(p3->parse(s) == 'k');
@@ -103,7 +103,7 @@ TEST_CASE("parser seq")
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);
   }
-  SECTION("seq skip operator") {
+  SECTION("seq ignore fst operator") {
     PP<char> p1 = std::make_shared<P<char>>(
         "test1", [](State &s) { return 'o'; });
     PP<char> p2 = std::make_shared<P<char>>(
@@ -112,6 +112,31 @@ TEST_CASE("parser seq")
 
     State s;
     REQUIRE(p3->parse(s) == 'k');
+    REQUIRE(p3->metadata.children[0] == &p1->metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::SEQ);
+  }
+  SECTION("seq ignore snd") {
+    P<char> p1("test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<char> p3 = p1.seq_ignore_snd(p2);
+
+    State s;
+    REQUIRE(p3->parse(s) == 'o');
+    REQUIRE(p3->metadata.children[0] == &p1.metadata);
+    REQUIRE(p3->metadata.children[1] == &p2->metadata);
+    REQUIRE(p3->metadata.type == parser::SEQ);
+  }
+  SECTION("seq ignore snd operator") {
+    PP<char> p1 = std::make_shared<P<char>>(
+        "test1", [](State &s) { return 'o'; });
+    PP<char> p2 = std::make_shared<P<char>>(
+        "test2", [](State &s) { return 'k'; });
+    PP<char> p3 = p1 < p2;
+
+    State s;
+    REQUIRE(p3->parse(s) == 'o');
     REQUIRE(p3->metadata.children[0] == &p1->metadata);
     REQUIRE(p3->metadata.children[1] == &p2->metadata);
     REQUIRE(p3->metadata.type == parser::SEQ);

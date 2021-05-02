@@ -368,7 +368,7 @@ namespace parser
      * @return        pointer to seq parser
      */
     template <typename U>
-    std::shared_ptr<Parser<U, X>> seq_skip(
+    std::shared_ptr<Parser<U, X>> seq_ignore_fst(
         const std::shared_ptr<Parser<U, X>> second)
     {
       return std::make_shared<Parser<U, X>>(
@@ -376,6 +376,25 @@ namespace parser
           [this, second](State<X> &s) -> U {
             this->parse(s);
             return second->parse(s);
+          },
+          metadata_list{&this->metadata, &second->metadata});
+    }
+
+    /*!
+     * Seq returning only the first parser result
+     * @param second  next parsre to sequence
+     * @return        pointer to seq parser
+     */
+    template <typename U>
+    std::shared_ptr<Parser<T, X>> seq_ignore_snd(
+        const std::shared_ptr<Parser<U, X>> second)
+    {
+      return std::make_shared<Parser<T, X>>(
+          SEQ,
+          [this, second](State<X> &s) -> T {
+            T res = this->parse(s);
+            second->parse(s);
+            return res;
           },
           metadata_list{&this->metadata, &second->metadata});
     }
@@ -393,7 +412,7 @@ namespace parser
     }
 
     /*!
-     * Operator shorthand for seq_skip
+     * Operator shorthand for seq_ignore_fst
      * @param second  next parser to sequence
      * @return        pointer to seq parser
      */
@@ -401,7 +420,19 @@ namespace parser
     std::shared_ptr<Parser<U, X>> operator>(
         const std::shared_ptr<Parser<U, X>> second)
     {
-      return seq_skip(second);
+      return seq_ignore_fst(second);
+    }
+
+    /*!
+     * Operator shorthand for seq_ignore_snd
+     * @param second  next parser to sequence
+     * @return        pointer to seq parser
+     */
+    template <typename U>
+    std::shared_ptr<Parser<T, X>> operator<(
+        const std::shared_ptr<Parser<T, X>> second)
+    {
+      return seq_ignore_snd(second);
     }
 
     // alt method chains ------------------------------------------------------
@@ -613,7 +644,15 @@ namespace parser
       const std::shared_ptr<Parser<T, X>> first,
       const std::shared_ptr<Parser<U, X>> second)
   {
-    return first->seq_skip(second);
+    return first->seq_ignore_fst(second);
+  }
+
+  template <typename T, typename U, typename X>
+  std::shared_ptr<Parser<T, X>> operator<(
+      const std::shared_ptr<Parser<T, X>> first,
+      const std::shared_ptr<Parser<U, X>> second)
+  {
+    return first->seq_ignore_snd(second);
   }
 
   template <typename T, typename X>
