@@ -54,28 +54,6 @@ namespace parser::alg
   /*! Either both or one of either type */
   template <typename T1, typename T2>
   using EitherAll = Either<Both<T1, T2>, Either<T1, T2>>;
-  /*! Check if EitherAll has first value */
-  template <typename T1, typename T2>
-  bool first_exists(EitherAll<T1, T2> &e) { return e.left || e.rx.left; }
-  /*! Check if EitherAll has second value */
-  template <typename T1, typename T2>
-  bool second_exists(EitherAll<T1, T2> &e) { return e.left || !e.rx.left; }
-  /*! Trys to return first value of EitherAll */
-  template <typename T1, typename T2>
-  T1 get_first(EitherAll<T1, T2> &e)
-  {
-    if (e.left)
-      return e.lx.lx;
-    return e.rx.lx;
-  }
-  /*! Trys to return second value of EitherAll*/
-  template <typename T1, typename T2>
-  T2 get_second(EitherAll<T1, T2> &e)
-  {
-    if (e.left)
-      return e.lx.rx;
-    return e.rx.rx;
-  }
 
   template <typename T1_, typename T2_>
   Either<T1_, T2_> Left(T1_ x)
@@ -96,11 +74,15 @@ namespace parser::alg
   }
 }
 
-// algebraic util functions
+// mapping util functions
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace parser::alg::util
+namespace parser::maps
 {
+  using namespace parser::alg;
+
+  // both mappers -------------------------------------------------------------
+
   /*! Returns first element of a pair */
   template <typename T, typename U>
   T fst(const Both<T, U> &b) { return b.lx; }
@@ -122,6 +104,9 @@ namespace parser::alg::util
   {
     return b.rx.lx;
   }
+
+  // either mappers -----------------------------------------------------------
+
   /*!
    * Given an either where both sides are the same type,
    * return either which value
@@ -132,6 +117,31 @@ namespace parser::alg::util
   T get_either(const Either<T, T> &e)
   {
     return e.left ? e.lx : e.rx;
+  }
+
+  // either all mappers -------------------------------------------------------
+
+  /*! Check if EitherAll has first value */
+  template <typename T1, typename T2>
+  bool first_exists(EitherAll<T1, T2> &e) { return e.left || e.rx.left; }
+  /*! Check if EitherAll has second value */
+  template <typename T1, typename T2>
+  bool second_exists(EitherAll<T1, T2> &e) { return e.left || !e.rx.left; }
+  /*! Trys to return first value of EitherAll */
+  template <typename T1, typename T2>
+  T1 get_first(EitherAll<T1, T2> &e)
+  {
+    if (e.left)
+      return e.lx.lx;
+    return e.rx.lx;
+  }
+  /*! Trys to return second value of EitherAll*/
+  template <typename T1, typename T2>
+  T2 get_second(EitherAll<T1, T2> &e)
+  {
+    if (e.left)
+      return e.lx.rx;
+    return e.rx.rx;
   }
 }
 
@@ -260,8 +270,9 @@ namespace parser::state
 
 namespace parser
 {
-  using namespace parser::state;
+  using namespace state;
   using namespace alg;
+  using namespace maps;
 
   /*! parser type values */
   enum parser_type

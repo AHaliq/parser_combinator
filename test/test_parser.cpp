@@ -6,6 +6,7 @@
 #include <memory>
 
 using namespace parser::alg;
+using namespace parser::maps;
 using State = parser::state::State<>;
 using StateString = parser::state::StateString<>;
 template <typename T>

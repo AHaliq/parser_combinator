@@ -2,6 +2,7 @@
 #include "parser_combinator.h"
 
 using namespace parser::alg;
+using namespace parser::maps;
 struct ent {
   int x;
 };
@@ -70,8 +71,8 @@ TEST_CASE("closure construction") {
 
 TEST_CASE("both getters") {
   Both<int, std::string> b(1, "hey");
-  REQUIRE(util::fst(b) == 1);
-  REQUIRE(util::snd(b) == "hey");
+  REQUIRE(fst(b) == 1);
+  REQUIRE(snd(b) == "hey");
 }
 
 TEST_CASE("nested both") {
@@ -87,6 +88,6 @@ TEST_CASE("nested both") {
   SECTION("get mid") {
     Both<int,int> b3(1,2);
     Both<Both<int,int>,int> b4(b3,3);
-    REQUIRE(util::get_mid(b4) == 2);
+    REQUIRE(get_mid(b4) == 2);
   }
 }
