@@ -10,7 +10,8 @@ using StateString = parser::state::StateString<>;
 using StateIStream = parser::state::StateIStream<>;
 using StateStreamBuf = parser::state::StateStreamBuf<>;
 
-TEST_CASE("state base class") {
+TEST_CASE("state base class")
+{
   State s;
   REQUIRE_THROWS(s.adv());
   REQUIRE_FALSE(s.has_failed());
@@ -20,8 +21,10 @@ TEST_CASE("state base class") {
   REQUIRE(s.get_fail() == 123);
 }
 
-TEST_CASE("state string") {
-  SECTION("standard parse") {
+TEST_CASE("state string")
+{
+  SECTION("standard parse")
+  {
     std::string str = "hello";
     StateString s(&str);
     REQUIRE(s.adv() == 'h');
@@ -31,7 +34,8 @@ TEST_CASE("state string") {
     REQUIRE(s.adv() == 'o');
     REQUIRE_THROWS(s.adv());
   }
-  SECTION("jump parse") {
+  SECTION("jump parse")
+  {
     std::string str = "hello";
     StateString s1(&str);
     REQUIRE(s1.adv() == 'h');
@@ -42,8 +46,10 @@ TEST_CASE("state string") {
   }
 }
 
-TEST_CASE("state string stream") {
-  SECTION("standard parse") {
+TEST_CASE("state string stream")
+{
+  SECTION("standard parse")
+  {
     std::string str = "hello";
     std::stringstream stream(str);
     StateIStream s(&stream);
@@ -54,7 +60,8 @@ TEST_CASE("state string stream") {
     REQUIRE(s.adv() == 'o');
     REQUIRE_THROWS(s.adv());
   }
-  SECTION("jump parse") {
+  SECTION("jump parse")
+  {
     std::string str = "hello";
     std::stringstream stream(str);
     StateIStream s1(&stream);
@@ -66,8 +73,10 @@ TEST_CASE("state string stream") {
   }
 }
 
-TEST_CASE("state file stream") {
-  SECTION("standard parse") {
+TEST_CASE("state file stream")
+{
+  SECTION("standard parse")
+  {
     std::fstream file;
     file.open("test.txt", std::fstream::out);
     file << "hello";
@@ -83,7 +92,8 @@ TEST_CASE("state file stream") {
     file.close();
     remove("test.txt");
   }
-  SECTION("jump parse") {
+  SECTION("jump parse")
+  {
     std::fstream file;
     file.open("test.txt", std::fstream::out);
     file << "hello";
@@ -100,8 +110,10 @@ TEST_CASE("state file stream") {
   }
 }
 
-TEST_CASE("state streambuf") {
-  SECTION("standard parse") {
+TEST_CASE("state streambuf")
+{
+  SECTION("standard parse")
+  {
     const char sentence[] = "hello";
     std::filebuf pbuf;
     pbuf.open("test.txt", std::ios_base::out);
@@ -118,7 +130,8 @@ TEST_CASE("state streambuf") {
     pbuf.close();
     remove("test.txt");
   }
-  SECTION("jump parse") {
+  SECTION("jump parse")
+  {
     const char sentence[] = "hello";
     std::filebuf pbuf;
     pbuf.open("test.txt", std::ios_base::out);
