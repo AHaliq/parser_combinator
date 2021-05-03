@@ -5,6 +5,7 @@
 #include <ios>
 #include <functional>
 #include <memory>
+#include <cctype>
 
 // algebraic data structures
 ///////////////////////////////////////////////////////////////////////////////
@@ -143,6 +144,32 @@ namespace parser::maps
       return e.lx.rx;
     return e.rx.rx;
   }
+
+  // general ------------------------------------------------------------------
+
+  /*! map character vector to string */
+  static std::string str_of_charvec(std::vector<char> res) {
+    return std::string(res.begin(), res.end());
+  }
+
+  /*! map character vector to int */
+  static int int_of_charvec(std::vector<char> res) {
+    return std::stoi(str_of_charvec(res));
+  }
+
+  /*! char predicate determine if is digit */
+  static const bool digit_pred(char c) { return std::isdigit(c); }
+  /*! char predicate determine if is lowercase char */
+  static const bool lower_pred(char c) { return std::islower(c); }
+  /*! char predicate determine if is uppercase char */
+  static const bool upper_pred(char c) { return std::isupper(c); }
+  /*! char predicate determine if is alphabet */
+  static const bool letter_pred(char c) { return std::isalpha(c); }
+  /*! char predicate determine if is alphanumeric char */
+  static const bool alphanum_pred(char c) { return std::isalnum(c); }
+  /*! char predicate determine if is whitespace */
+  static const bool space_pred(char c) { return std::isspace(c); }
+
 }
 
 
@@ -882,6 +909,10 @@ namespace parser
   {
     return first->map(g);
   }
+}
+
+namespace parser::primitives {
+
 }
 //TODO metadata is graph via children as adjlist
 //TODO to print metadata stack, will need to make mapping from uuid to metadata

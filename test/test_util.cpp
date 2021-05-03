@@ -40,6 +40,16 @@ TEST_CASE("maps")
     REQUIRE(second_exists(r));
     REQUIRE(get_second(r) == 'a');
   }
+  SECTION("general") {
+    REQUIRE(str_of_charvec(std::vector<char>{'a','b','c'}) == "abc");
+    REQUIRE(int_of_charvec(std::vector<char>{'1','2','3'}) == 123);
+    REQUIRE(digit_pred('1'));
+    REQUIRE(lower_pred('a'));
+    REQUIRE(upper_pred('A'));
+    REQUIRE(letter_pred('a'));
+    REQUIRE(alphanum_pred('1'));
+    REQUIRE(space_pred(' '));
+  }
 }
 
 TEST_CASE("combiners")
