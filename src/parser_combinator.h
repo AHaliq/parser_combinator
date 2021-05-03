@@ -912,9 +912,52 @@ namespace parser
 }
 
 namespace parser::primitives {
+  template <typename T>
+  using P = parser::Parser<T>;
+  template <typename T>
+  using PP = std::shared_ptr<P<T>>;
+  using namespace parser::state;
 
+  template <typename X = empty>
+  static PP<int> id = std::make_shared<P<int>>("id", [](State<X> &s){ return 0; });
+  template <typename X = empty>
+  static PP<char> item = std::make_shared<P<char>>("item", [](State<X> &s) { return s.adv(); });
+  template <typename X = empty>
+  static PP<char> sat(std::function<bool(char)> pred) {
+    return item<X>->template map<char>([pred](char c) -> char {
+      if(pred(c)) {
+        return c;
+      } else {
+        throw std::vector<State<X>>();
+      }
+    });
+  }
+  /*
+  empty
+
+  sat
+  digit
+  lower
+  upper
+  letter
+  alphanum
+  space
+
+  char_match
+  string_match
+
+  ident
+  nat
+  intg
+  spaces
+
+  token
+  identifier
+  natural
+  integer
+  symbol
+  */
 }
 //TODO metadata is graph via children as adjlist
 //TODO to print metadata stack, will need to make mapping from uuid to metadata
 // each State in stack trace will lookup the mapping
-//TODO change parser::alg::util to parser::maps, and make parser::combiners
