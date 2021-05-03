@@ -85,22 +85,22 @@ namespace parser::maps
 
   /*! Returns first element of a pair */
   template <typename T, typename U>
-  T fst(const Both<T, U> &b) { return b.lx; }
+  static T fst(const Both<T, U> &b) { return b.lx; }
   /*! Returns second element of a pair */
   template <typename T, typename U>
-  U snd(const Both<T, U> &b) { return b.rx; }
+  static U snd(const Both<T, U> &b) { return b.rx; }
   /*!
    * Given a three element Both, return its middle element
    * @param b three element
    * @return middle value
    */
   template <typename T, typename U, typename V>
-  U get_mid(const Both<Both<T, U>, V> &b)
+  static U get_mid(const Both<Both<T, U>, V> &b)
   {
     return b.lx.rx;
   }
   template <typename T, typename U, typename V>
-  U get_mid(const Both<T, Both<U, V>> &b)
+  static U get_mid(const Both<T, Both<U, V>> &b)
   {
     return b.rx.lx;
   }
@@ -114,7 +114,7 @@ namespace parser::maps
    * @return either value
    */
   template <typename T>
-  T get_either(const Either<T, T> &e)
+  static T get_either(const Either<T, T> &e)
   {
     return e.left ? e.lx : e.rx;
   }
@@ -123,13 +123,13 @@ namespace parser::maps
 
   /*! Check if EitherAll has first value */
   template <typename T1, typename T2>
-  bool first_exists(EitherAll<T1, T2> &e) { return e.left || e.rx.left; }
+  static bool first_exists(EitherAll<T1, T2> &e) { return e.left || e.rx.left; }
   /*! Check if EitherAll has second value */
   template <typename T1, typename T2>
-  bool second_exists(EitherAll<T1, T2> &e) { return e.left || !e.rx.left; }
+  static bool second_exists(EitherAll<T1, T2> &e) { return e.left || !e.rx.left; }
   /*! Trys to return first value of EitherAll */
   template <typename T1, typename T2>
-  T1 get_first(EitherAll<T1, T2> &e)
+  static T1 get_first(EitherAll<T1, T2> &e)
   {
     if (e.left)
       return e.lx.lx;
@@ -137,11 +137,50 @@ namespace parser::maps
   }
   /*! Trys to return second value of EitherAll*/
   template <typename T1, typename T2>
-  T2 get_second(EitherAll<T1, T2> &e)
+  static T2 get_second(EitherAll<T1, T2> &e)
   {
     if (e.left)
       return e.lx.rx;
     return e.rx.rx;
+  }
+}
+
+
+// combiner util functions
+///////////////////////////////////////////////////////////////////////////////
+
+namespace parser::combiners
+{
+  /*! combine two characters into a string */
+  static std::string str_of_chars(char a, char b) {
+    return std::string(1, a) + std::string(1, b);
+  }
+  /*! concat two strings */
+  static std::string str_concat(std::string a, std::string b) {
+    return a + b;
+  }
+  /* fmap a vector and an element of its type using a function g */
+  template <typename T, typename U, typename V>
+  static std::function<std::vector<V>(std::vector<T>, U)>
+  fmap(std::function<V(T,U)> g) {
+    return [g](std::vector<T> xs, U y) -> std::vector<V> {
+      std::vector<V> res;
+      for(T x : xs)
+        res.push_back(g(x, y));
+      return res;
+    };
+  }
+  /* cross product two vectors of the same type with a function g */
+  template <typename T, typename U, typename V>
+  static std::function<std::vector<V>(std::vector<T>, std::vector<U>)>
+  product(std::function<V(T,U)> g) {
+    return [g](std::vector<T> xs, std::vector<U> ys) -> std::vector<V> {
+      std::vector<V> res;
+      for (T x : xs)
+        for (U y :ys)
+          res.push_back(g(x,y));
+      return res;
+    };
   }
 }
 
